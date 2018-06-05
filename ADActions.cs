@@ -22,12 +22,22 @@ namespace WA2AD
             if (member.FirstName != null && member.FirstName.Length > 0)
                 userPrincipal.GivenName = member.FirstName;
 
-             if (member.Email != null && member.Email.Length > 0)
+            if (member.Email != null && member.Email.Length > 0)
                 userPrincipal.EmailAddress = member.Email;
+            else
+            { 
+                Console.WriteLine("No email set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
+                return;
+            }
 
             string userLogonName = (string)member.FieldValues[FieldValue.ADUSERNAME].Value;
             if (userLogonName != null && userLogonName.Length > 0)
                 userPrincipal.SamAccountName = userLogonName;
+            else
+            {
+                Console.WriteLine("No username set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
+                return;
+            }
 
             String pwdOfNewlyCreatedUser = "ps1@@12345!~";
             userPrincipal.SetPassword(pwdOfNewlyCreatedUser);
