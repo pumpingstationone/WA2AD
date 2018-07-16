@@ -10,7 +10,37 @@ namespace WA2AD
 {
     class ADActions
     {
+        private class PS1GroupPrincipals : GroupPrincipal
+        {
+            public PS1GroupPrincipals(PrincipalContext context) : base(context) { }
+
+            public PS1GroupPrincipals(PrincipalContext context, string samAccountName)
+                : base(context, samAccountName)
+            {
+            }
+
+            // For PS1 we use the "otherPager" field (which is multi-valued) to store
+            // the (possibly more than one) RFID tag(s) the user may have
+            [DirectoryProperty("otherPager")]
+            public string otherPager
+            {
+                get
+                {
+                    if (ExtensionGet("otherPager").Length != 1)
+                        return null;
+
+                    return (string)ExtensionGet("otherPager")[0];
+
+                }
+                set
+                {
+                    this.ExtensionSet("otherPager", value);
+                }
+            }
+        }
+
         private PrincipalContext pc = null;
+        private PS1GroupPrincipals ps1Groups = null;
 
         private void CreateUser(Member member)
         {
@@ -39,13 +69,20 @@ namespace WA2AD
                 return;
             }
 
+            // The user may have an RFID tag            
+            if (member.FieldValues[FieldValue.RFIDTAG].Value != null && member.FieldValues[FieldValue.RFIDTAG].ToString().Length > 0)
+            {
+                string rfidTag = (string)member.FieldValues[FieldValue.RFIDTAG].Value;
+                this.ps1Groups.otherPager = rfidTag;
+            }
+
             String pwdOfNewlyCreatedUser = "ps1@@12345!~";
             userPrincipal.SetPassword(pwdOfNewlyCreatedUser);
             userPrincipal.PasswordNotRequired = false;
 
             userPrincipal.Enabled = true;
             userPrincipal.ExpirePasswordNow();
-
+           
             try
             {
                 userPrincipal.Save();
@@ -67,6 +104,13 @@ namespace WA2AD
             {
                 Console.WriteLine("Going to set " + member.FirstName + " " + member.LastName + "'s status to " + (shouldBeEnabled ? "enabled" : "disabled"));
                 userPrincipal.Enabled = shouldBeEnabled;
+            }
+
+            // The user may have updated their RFID tag            
+            if (member.FieldValues[FieldValue.RFIDTAG].Value != null && member.FieldValues[FieldValue.RFIDTAG].ToString().Length > 0)
+            {
+                string rfidTag = (string)member.FieldValues[FieldValue.RFIDTAG].Value;
+                this.ps1Groups.otherPager = rfidTag;
             }
 
             try
@@ -109,6 +153,7 @@ namespace WA2AD
             try
             {
                 this.pc = new PrincipalContext(ContextType.Domain, @adServer, @usersPath, ContextOptions.Negotiate, username, password);
+                this.ps1Groups = new PS1GroupPrincipals(this.pc);
             }
             catch (Exception e)
             {
