@@ -9,38 +9,38 @@ using System.DirectoryServices.AccountManagement;
 namespace WA2AD
 {
     class ADActions
-    {
-        private class PS1GroupPrincipals : GroupPrincipal
+    {  
+        private PrincipalContext pc = null;
+  
+        private void addOthePager(Principal userPrincipal, string rfidTag)
         {
-            public PS1GroupPrincipals(PrincipalContext context) : base(context) { }
-
-            public PS1GroupPrincipals(PrincipalContext context, string samAccountName)
-                : base(context, samAccountName)
+            DirectoryEntry de = (userPrincipal.GetUnderlyingObject() as DirectoryEntry);
+            if (de != null)
             {
-            }
-
-            // For PS1 we use the "otherPager" field (which is multi-valued) to store
-            // the (possibly more than one) RFID tag(s) the user may have
-            [DirectoryProperty("otherPager")]
-            public string otherPager
-            {
-                get
+#if DEBUG
+                DirectorySearcher deSearch = new DirectorySearcher(de);
+                deSearch.PropertiesToLoad.Add("otherPager");
+                SearchResultCollection results = deSearch.FindAll();
+                if (results != null && results.Count > 0)
                 {
-                    if (ExtensionGet("otherPager").Length != 1)
-                        return null;
-
-                    return (string)ExtensionGet("otherPager")[0];
-
+                    ResultPropertyCollection rpc = results[0].Properties;
+                    foreach (string rp in rpc.PropertyNames)
+                    {
+                        if (rp == "otherpager")
+                        {
+                            int pagerCount = rpc["otherpager"].Count;
+                            for (int x = 0; x < pagerCount; ++x)
+                            {
+                                Console.WriteLine(rpc["otherpager"][x].ToString());
+                            }
+                        }
+                    }
                 }
-                set
-                {
-                    this.ExtensionSet("otherPager", value);
-                }
+#endif
+                de.Properties["otherPager"].Add(rfidTag);
+                de.CommitChanges();
             }
         }
-
-        private PrincipalContext pc = null;
-        private PS1GroupPrincipals ps1Groups = null;
 
         private void CreateUser(Member member)
         {
@@ -73,7 +73,7 @@ namespace WA2AD
             if (member.FieldValues[FieldValue.RFIDTAG].Value != null && member.FieldValues[FieldValue.RFIDTAG].ToString().Length > 0)
             {
                 string rfidTag = (string)member.FieldValues[FieldValue.RFIDTAG].Value;
-                this.ps1Groups.otherPager = rfidTag;
+                addOthePager(userPrincipal, rfidTag); 
             }
 
             String pwdOfNewlyCreatedUser = "ps1@@12345!~";
@@ -110,7 +110,7 @@ namespace WA2AD
             if (member.FieldValues[FieldValue.RFIDTAG].Value != null && member.FieldValues[FieldValue.RFIDTAG].ToString().Length > 0)
             {
                 string rfidTag = (string)member.FieldValues[FieldValue.RFIDTAG].Value;
-                this.ps1Groups.otherPager = rfidTag;
+                addOthePager(userPrincipal, rfidTag);
             }
 
             try
@@ -152,8 +152,7 @@ namespace WA2AD
 
             try
             {
-                this.pc = new PrincipalContext(ContextType.Domain, @adServer, @usersPath, ContextOptions.Negotiate, username, password);
-                this.ps1Groups = new PS1GroupPrincipals(this.pc);
+                this.pc = new PrincipalContext(ContextType.Domain, @adServer, @usersPath, ContextOptions.Negotiate, username, password);               
             }
             catch (Exception e)
             {
