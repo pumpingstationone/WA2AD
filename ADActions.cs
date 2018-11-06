@@ -14,6 +14,9 @@ namespace WA2AD
   
         private void addOthePager(Principal userPrincipal, string rfidTag)
         {
+            if (rfidTag == null || rfidTag.Length == 0)
+                return;
+
             DirectoryEntry de = (userPrincipal.GetUnderlyingObject() as DirectoryEntry);
             if (de != null)
             {
@@ -42,8 +45,25 @@ namespace WA2AD
             }
         }
 
+        private FieldValue getValueForKey(Member member, string key)
+        {
+            for (int x = 0; x < member.FieldValues.Count; ++x)
+            {
+                if (member.FieldValues[x].FieldName == key)
+                {
+                    return member.FieldValues[x];
+                }
+            }
+
+            return null;
+        }
+
         private void CreateUser(Member member)
         {
+            // Don't create the user if not active
+            if (member.MembershipEnabled == false)
+                return;
+
             UserPrincipal userPrincipal = new UserPrincipal(this.pc);
 
             if (member.LastName != null && member.LastName.Length > 0)
@@ -69,10 +89,11 @@ namespace WA2AD
                 return;
             }
 
-            // The user may have an RFID tag            
-            if (member.FieldValues[FieldValue.RFIDTAG].Value != null && member.FieldValues[FieldValue.RFIDTAG].ToString().Length > 0)
+            // The user may have an RFID tag       
+            FieldValue rfidTagFV = getValueForKey(member, "RFID Tag");
+            if (rfidTagFV != null && rfidTagFV.ToString().Length > 0)
             {
-                string rfidTag = (string)member.FieldValues[FieldValue.RFIDTAG].Value;
+                string rfidTag = (string)rfidTagFV.Value;
                 addOthePager(userPrincipal, rfidTag); 
             }
 
@@ -106,12 +127,13 @@ namespace WA2AD
                 userPrincipal.Enabled = shouldBeEnabled;
             }
 
-            // The user may have updated their RFID tag            
-            if (member.FieldValues[FieldValue.RFIDTAG].Value != null && member.FieldValues[FieldValue.RFIDTAG].ToString().Length > 0)
+            // The user may have updated their RFID tag   
+            FieldValue rfidTagFV = getValueForKey(member, "RFID Tag");
+            if (rfidTagFV != null && rfidTagFV.ToString().Length > 0)
             {
-                string rfidTag = (string)member.FieldValues[FieldValue.RFIDTAG].Value;
+                string rfidTag = (string)rfidTagFV.Value;
                 addOthePager(userPrincipal, rfidTag);
-            }
+            }      
 
             try
             {
