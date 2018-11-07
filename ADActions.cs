@@ -17,6 +17,7 @@ namespace WA2AD
             if (rfidTag == null || rfidTag.Length == 0)
                 return;
 
+            userPrincipal.Save();
             DirectoryEntry de = (userPrincipal.GetUnderlyingObject() as DirectoryEntry);
             if (de != null)
             {
@@ -82,12 +83,20 @@ namespace WA2AD
 
             string userLogonName = (string)member.FieldValues[FieldValue.ADUSERNAME].Value;
             if (userLogonName != null && userLogonName.Length > 0)
-                userPrincipal.SamAccountName = userLogonName;
+                // Apparently we can only use the first twenty characters for this name
+                userPrincipal.SamAccountName = userLogonName.Substring(0, 20);
             else
             {
                 Console.WriteLine("No username set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
                 return;
             }
+
+            // Hypothetically they should always have an email, but let's be
+            // careful anyway
+            if (member.Email != null && member.Email.Length > 0)
+                // Can only use the first 256 characters (though never seen an
+                // email address that long, but okay....)
+                userPrincipal.UserPrincipalName = member.Email.Substring(0, 256);
 
             // The user may have an RFID tag       
             FieldValue rfidTagFV = getValueForKey(member, "RFID Tag");
@@ -164,7 +173,7 @@ namespace WA2AD
         {
             // The username with Domain Admin or comparable rights
             // in <Domain>\<User> format
-            string username = @"";
+            string username = @""; 
             string password = @"";
             // The AD server name or IP address
             string adServer = @"";

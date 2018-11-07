@@ -15,12 +15,26 @@ namespace WA2AD
 
         public Program()
         {
-            foreach (var obj in waData.GetMemberData().GetValue("Contacts"))
+            try
             {
-                Member member = (Member)obj.ToObject<Member>();
-               
-                Console.WriteLine("Going to work with " + member.FirstName + " " + member.LastName);
-                adActions.HandleMember(member);
+                foreach (var obj in waData.GetMemberData().GetValue("Contacts"))
+                {
+                    Member member = (Member)obj.ToObject<Member>();
+
+                    Console.WriteLine("Going to work with " + member.FirstName + " " + member.LastName);
+                    try
+                    { 
+                        adActions.HandleMember(member);
+                    }
+                    catch (Exception me)
+                    {
+                        Console.WriteLine("Hmm, An error occurred when working with {0}: '{1}'", member.FirstName, me);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("An error occurred: '{0}'", e);
             }
         }
 
