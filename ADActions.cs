@@ -208,6 +208,8 @@ namespace WA2AD
                 Console.WriteLine("Didn't find " + member.FirstName + " in AD, so must be new...");
                 CreateUser(member);
             }
+
+            u.Save();
         }
     }
 }
