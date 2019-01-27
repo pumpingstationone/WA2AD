@@ -14,7 +14,7 @@ namespace WA2AD
 
         // The token is authorized-application-specific to your
         // Wild Apricot account
-        private const string apiToken = "";
+        private string apiToken = "";
 
         private string oauthToken;
         private string accountId;
@@ -87,6 +87,15 @@ namespace WA2AD
 
         public WAData()
         {
+            // Get our token from the ini file
+            var MyIni = new IniFile();
+            this.apiToken = MyIni.Read("WAToken").Trim();
+            if (this.apiToken.Length == 0)
+            {
+                Console.WriteLine("Whoops, can't get the WA oauth token! Check the ini file is in the same dir as the executable and set properly!");
+                return;
+            }
+
             Console.WriteLine("Starting to get the data from Wild Apricot...");
             GetOauthToken();
             GetMemberListUrl();

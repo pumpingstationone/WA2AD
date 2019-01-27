@@ -84,7 +84,7 @@ namespace WA2AD
             string userLogonName = (string)member.FieldValues[FieldValue.ADUSERNAME].Value;
             if (userLogonName != null && userLogonName.Length > 0)
                 // Apparently we can only use the first twenty characters for this name
-                userPrincipal.SamAccountName = userLogonName.Substring(0, 20);
+                userPrincipal.SamAccountName = userLogonName.Length > 20 ? userLogonName.Substring(0, 20) : userLogonName;
             else
             {
                 Console.WriteLine("No username set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
@@ -96,7 +96,7 @@ namespace WA2AD
             if (member.Email != null && member.Email.Length > 0)
                 // Can only use the first 256 characters (though never seen an
                 // email address that long, but okay....)
-                userPrincipal.UserPrincipalName = member.Email.Substring(0, 256);
+                userPrincipal.UserPrincipalName = member.Email.Length > 256 ? member.Email.Substring(0, 256) : member.Email;
 
             // The user may have an RFID tag       
             FieldValue rfidTagFV = getValueForKey(member, "RFID Tag");
@@ -171,28 +171,70 @@ namespace WA2AD
 
         public ADActions()
         {
+            //
+            // Load the active directory settings from the ini file. If there
+            // aren't any then we'll move blindly ahead assuming that the machine
+            // running the program is on the domain we want to use, and that the
+            // user running the program (typically a service account) has the
+            // proper rights to manipulate AD objects
+            //
+
+            var MyIni = new IniFile();
+
+
             // The username with Domain Admin or comparable rights
             // in <Domain>\<User> format
-            string username = @""; 
-            string password = @"";
+            string username = MyIni.Read("ADUser").Trim(); 
+            string password = MyIni.Read("ADPassword").Trim();
             // The AD server name or IP address
-            string adServer = @"";
+            string adServer = MyIni.Read("ADIPAddress").Trim();
             // The LDAP path to the users
             // (e.g. CN=users,DC=ad,DC=organizationname,DC=org)
-            string usersPath = @"";
+            string usersPath = MyIni.Read("ADUsersOU").Trim();
 
-            try
+            // If we don't have a CN, that's bad because we really need that one
+            if (usersPath.Length == 0)
             {
-                this.pc = new PrincipalContext(ContextType.Domain, @adServer, @usersPath, ContextOptions.Negotiate, username, password);               
+                Console.WriteLine("WHOA! The CN needs to be set in the ini file! (The ADUsersOU property). Not going to continue because I don't know where to put anything!");
+                return;
             }
-            catch (Exception e)
+            else
             {
-                Console.WriteLine("Hmm, failed to create PrincipalContext. Exception is: " + e);
+                Console.WriteLine("Working with: " + usersPath);
+            }
+
+            // If we have a user/password/IP combo, then we'll assume
+            // we're currently running on a machine that is *not* on the
+            // domain we want to work with.
+            if (username.Length == 0 || password.Length == 0 || adServer.Length == 0)
+            {
+                Console.WriteLine("Ok, we're going to connect assuming we're on the domain, run by a user with appropriate permissions");
+                this.pc = new PrincipalContext(ContextType.Domain, null, @usersPath, ContextOptions.Negotiate);
+            }
+            else
+            {
+                // We have all the credentials, so we're going to try to connect using those
+                Console.WriteLine("Going to connect with credentials...");
+                try
+                {
+                    this.pc = new PrincipalContext(ContextType.Domain, @adServer, @usersPath, ContextOptions.Negotiate, username, password);               
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Hmm, failed to create PrincipalContext. Exception is: " + e);
+                }
             }
         }
 
         public void HandleMember(Member member)
         {
+            // Is this a real member, or just a contact?
+            if (member.MembershipEnabled == false || member.MembershipLevel == null)
+            {
+                Console.WriteLine("This person is not a member!");
+                return;
+            }
+
             UserPrincipal u = new UserPrincipal(pc)
             {
                 SamAccountName = (string)member.FieldValues[FieldValue.ADUSERNAME].Value
@@ -207,9 +249,7 @@ namespace WA2AD
             {
                 Console.WriteLine("Didn't find " + member.FirstName + " in AD, so must be new...");
                 CreateUser(member);
-            }
-
-            u.Save();
+            }           
         }
     }
 }

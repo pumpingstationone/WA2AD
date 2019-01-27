@@ -17,7 +17,7 @@ namespace WA2AD
     public class FieldValue
     {
         public const int ADUSERNAME = 44;
-        public const int RFIDTAG = 49;
+        public const int RFIDTAG = 48;
 
         public string FieldName { get; set; }
         public object Value { get; set; }
