@@ -5,11 +5,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
+using System.Diagnostics;
 
 namespace WA2AD
 {
     class ADActions
-    {  
+    {
+        // For writing to the system event log (See program.cs for how to make sure this works)
+        private EventLog appLog;
+
         private PrincipalContext pc = null;
   
         private void addOthePager(Principal userPrincipal, string rfidTag)
@@ -171,6 +175,9 @@ namespace WA2AD
 
         public ADActions()
         {
+            this.appLog = new EventLog("Application");
+            appLog.Source = "WA2AD";
+
             //
             // Load the active directory settings from the ini file. If there
             // aren't any then we'll move blindly ahead assuming that the machine
@@ -180,7 +187,6 @@ namespace WA2AD
             //
 
             var MyIni = new IniFile();
-
 
             // The username with Domain Admin or comparable rights
             // in <Domain>\<User> format
@@ -195,11 +201,13 @@ namespace WA2AD
             // If we don't have a CN, that's bad because we really need that one
             if (usersPath.Length == 0)
             {
+                appLog.WriteEntry("WHOA! The CN needs to be set in the ini file! (The ADUsersOU property). Not going to continue because I don't know where to put anything!", EventLogEntryType.Error);
                 Console.WriteLine("WHOA! The CN needs to be set in the ini file! (The ADUsersOU property). Not going to continue because I don't know where to put anything!");
                 return;
             }
             else
             {
+                appLog.WriteEntry(string.Format("Going to work with objects in {0}", usersPath));
                 Console.WriteLine("Working with: " + usersPath);
             }
 
@@ -221,6 +229,7 @@ namespace WA2AD
                 }
                 catch (Exception e)
                 {
+                    appLog.WriteEntry(string.Format("Hmm, failed to create PrincipalContext. Exception is: {0}", e), EventLogEntryType.Error);
                     Console.WriteLine("Hmm, failed to create PrincipalContext. Exception is: " + e);
                 }
             }

@@ -5,12 +5,16 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Http;
 using Newtonsoft.Json.Linq;
+using System.Diagnostics;
 
 namespace WA2AD
 {
     class WAData
     {
         private static readonly HttpClient client = new HttpClient();
+
+        // For writing to the system event log (See program.cs for how to make sure this works)
+        private EventLog appLog;
 
         // The token is authorized-application-specific to your
         // Wild Apricot account
@@ -87,15 +91,20 @@ namespace WA2AD
 
         public WAData()
         {
+            this.appLog = new EventLog("Application");
+            appLog.Source = "WA2AD";
+
             // Get our token from the ini file
             var MyIni = new IniFile();
             this.apiToken = MyIni.Read("WAToken").Trim();
             if (this.apiToken.Length == 0)
             {
+                appLog.WriteEntry("Whoops, can't get the WA oauth token! Check the ini file is in the same dir as the executable and set properly!", EventLogEntryType.Error);
                 Console.WriteLine("Whoops, can't get the WA oauth token! Check the ini file is in the same dir as the executable and set properly!");
                 return;
             }
 
+            appLog.WriteEntry("Starting to get the data from Wild Apricot...");
             Console.WriteLine("Starting to get the data from Wild Apricot...");
             GetOauthToken();
             GetMemberListUrl();
@@ -103,11 +112,18 @@ namespace WA2AD
             System.Threading.Thread.Sleep(2000);
             this.memberData = GetMemberList();
 
+            appLog.WriteEntry("Finished getting the data from Wild Apricot...");
             Console.WriteLine("Finished getting the data from Wild Apricot...");
             if (this.memberData.HasValues)
+            {
+                appLog.WriteEntry("...and we have data to work with.");
                 Console.WriteLine("...and we have data to work with.");
+            }
             else
+            {
+                appLog.WriteEntry("...hmm, we don't have any data to work with!", EventLogEntryType.Error);
                 Console.WriteLine("...hmm, we don't have any data to work with!");
+            }
         }
 
         public ref JObject GetMemberData()
