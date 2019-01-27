@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
 using System.Diagnostics;
+using Newtonsoft.Json.Linq;
 
 namespace WA2AD
 {
@@ -16,6 +17,42 @@ namespace WA2AD
 
         private PrincipalContext pc = null;
   
+        // This method will add the users to the appropriate "computer groups" they
+        // have been authorized on.
+        // WARNING! The assumption is that the name of the authorization in Wild Apricot
+        // is *exactly* the same name as the OU in Active Directory. In other words, if
+        // the user is authorized in "Boss Authorized Users" in WA, then the name of the
+        // OU in Active Directory *must* be "Boss Authorized Users".
+        private void addUserToGroups(ref UserPrincipal userPrincipal, Member member)
+        {
+            FieldValue authGroups = getValueForKey(member, "Computer Authorizations");
+            if (authGroups != null)
+            {
+                JArray authsObj = (JArray)authGroups.Value;
+                if (authsObj.Count() > 0)
+                {
+                    for (int x = 0; x < authsObj.Count(); ++x)
+                    {
+                        JToken auth = authsObj[x];
+
+                        string groupName = auth.Value<string>("Label");
+                        Console.WriteLine("Going to add to the " + groupName + " group");
+                        GroupPrincipal group = GroupPrincipal.FindByIdentity(this.pc, groupName);
+
+                        try
+                        {
+                            group.Members.Add(this.pc, IdentityType.SamAccountName, userPrincipal.SamAccountName);
+                            group.Save();
+                        }
+                        catch (System.DirectoryServices.AccountManagement.PrincipalExistsException pe)
+                        {
+                            Console.WriteLine("...but the user is already in the group");
+                        }
+                    }
+                }
+            }
+        }
+
         private void addOthePager(Principal userPrincipal, string rfidTag)
         {
             if (rfidTag == null || rfidTag.Length == 0)
@@ -110,6 +147,9 @@ namespace WA2AD
                 addOthePager(userPrincipal, rfidTag); 
             }
 
+            // And update their group memberships
+            addUserToGroups(ref userPrincipal, member);
+
             String pwdOfNewlyCreatedUser = "ps1@@12345!~";
             userPrincipal.SetPassword(pwdOfNewlyCreatedUser);
             userPrincipal.PasswordNotRequired = false;
@@ -146,7 +186,10 @@ namespace WA2AD
             {
                 string rfidTag = (string)rfidTagFV.Value;
                 addOthePager(userPrincipal, rfidTag);
-            }      
+            }
+
+            // And update their group memberships
+            addUserToGroups(ref userPrincipal, member);
 
             try
             {
@@ -217,7 +260,8 @@ namespace WA2AD
             if (username.Length == 0 || password.Length == 0 || adServer.Length == 0)
             {
                 Console.WriteLine("Ok, we're going to connect assuming we're on the domain, run by a user with appropriate permissions");
-                this.pc = new PrincipalContext(ContextType.Domain, null, @usersPath, ContextOptions.Negotiate);
+                //this.pc = new PrincipalContext(ContextType.Domain, null, @usersPath, ContextOptions.Negotiate);
+                this.pc = new PrincipalContext(ContextType.Domain);
             }
             else
             {

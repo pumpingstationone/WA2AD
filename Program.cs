@@ -32,10 +32,10 @@ namespace WA2AD
                 foreach (var obj in waData.GetMemberData().GetValue("Contacts"))
                 {
                     Member member = (Member)obj.ToObject<Member>();
-
-                    Console.WriteLine("Going to work with " + member.FirstName + " " + member.LastName);
+                                      
                     try
-                    { 
+                    {
+                        Console.WriteLine("Going to work with " + member.FirstName + " " + member.LastName);
                         adActions.HandleMember(member);
                     }
                     catch (Exception me)

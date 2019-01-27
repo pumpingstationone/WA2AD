@@ -109,7 +109,7 @@ namespace WA2AD
             GetOauthToken();
             GetMemberListUrl();
 
-            System.Threading.Thread.Sleep(2000);
+            System.Threading.Thread.Sleep(5000);
             this.memberData = GetMemberList();
 
             appLog.WriteEntry("Finished getting the data from Wild Apricot...");
