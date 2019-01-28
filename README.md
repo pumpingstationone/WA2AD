@@ -23,3 +23,7 @@ Retrieves the contacts database using Wild Apricot's v2 API. Note that you need 
 #### `WAObjects.cs`
 
 The file contains the classes for working with the WA data. 
+
+#### `WA2AD.ini`
+
+This is the settings file. You need to at the very least populate the `WAToken` field with the appropriate security token from Wild Apricot for the app. The other fields are necessary only when running the application from a machine that is not in the actual domain you're working with.
