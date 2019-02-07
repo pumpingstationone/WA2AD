@@ -147,9 +147,6 @@ namespace WA2AD
                 addOthePager(userPrincipal, rfidTag); 
             }
 
-            // And update their group memberships
-            addUserToGroups(ref userPrincipal, member);
-
             String pwdOfNewlyCreatedUser = "ps1@@12345!~";
             userPrincipal.SetPassword(pwdOfNewlyCreatedUser);
             userPrincipal.PasswordNotRequired = false;
