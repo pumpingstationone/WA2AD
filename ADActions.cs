@@ -16,6 +16,9 @@ namespace WA2AD
         private EventLog appLog;
 
         private PrincipalContext pc = null;
+
+        // The OU, read from the INI file, that we want to save the users to
+        private string membersPath;
   
         // This method will add the users to the appropriate "computer groups" they
         // have been authorized on.
@@ -36,7 +39,7 @@ namespace WA2AD
                         JToken auth = authsObj[x];
 
                         string groupName = auth.Value<string>("Label");
-                        Console.WriteLine("Going to add to the " + groupName + " group");
+                        Console.WriteLine("Going to add to the " + groupName + " group");                        
                         GroupPrincipal group = GroupPrincipal.FindByIdentity(this.pc, groupName);
 
                         try
@@ -106,7 +109,11 @@ namespace WA2AD
             if (member.MembershipEnabled == false)
                 return;
 
-            UserPrincipal userPrincipal = new UserPrincipal(this.pc);
+            // We create a specific context when creating a new member so the object is stored
+            // in the right place in the domain (as set in the ini file)
+            PrincipalContext memberCtx = new PrincipalContext(ContextType.Domain, null, this.membersPath);
+
+            UserPrincipal userPrincipal = new UserPrincipal(memberCtx);
 
             if (member.LastName != null && member.LastName.Length > 0)
                 userPrincipal.Surname = member.LastName;
@@ -152,8 +159,9 @@ namespace WA2AD
             userPrincipal.PasswordNotRequired = false;
 
             userPrincipal.Enabled = true;
-            userPrincipal.ExpirePasswordNow();
-           
+            userPrincipal.ExpirePasswordNow();         
+
+
             try
             {
                 userPrincipal.Save();
@@ -236,10 +244,10 @@ namespace WA2AD
             string adServer = MyIni.Read("ADIPAddress").Trim();
             // The LDAP path to the users
             // (e.g. CN=users,DC=ad,DC=organizationname,DC=org)
-            string usersPath = MyIni.Read("ADUsersOU").Trim();
+            this.membersPath = MyIni.Read("ADUsersOU").Trim();
 
             // If we don't have a CN, that's bad because we really need that one
-            if (usersPath.Length == 0)
+            if (this.membersPath.Length == 0)
             {
                 appLog.WriteEntry("WHOA! The CN needs to be set in the ini file! (The ADUsersOU property). Not going to continue because I don't know where to put anything!", EventLogEntryType.Error);
                 Console.WriteLine("WHOA! The CN needs to be set in the ini file! (The ADUsersOU property). Not going to continue because I don't know where to put anything!");
@@ -247,8 +255,8 @@ namespace WA2AD
             }
             else
             {
-                appLog.WriteEntry(string.Format("Going to work with objects in {0}", usersPath));
-                Console.WriteLine("Working with: " + usersPath);
+                appLog.WriteEntry(string.Format("Going to work with member objects in {0}", this.membersPath));
+                Console.WriteLine("Working member objects with: " + this.membersPath);
             }
 
             // If we have a user/password/IP combo, then we'll assume
@@ -257,7 +265,7 @@ namespace WA2AD
             if (username.Length == 0 || password.Length == 0 || adServer.Length == 0)
             {
                 Console.WriteLine("Ok, we're going to connect assuming we're on the domain, run by a user with appropriate permissions");
-                //this.pc = new PrincipalContext(ContextType.Domain, null, @usersPath, ContextOptions.Negotiate);
+                // We need to use this context so we have full access to the domain, and not just one part of it
                 this.pc = new PrincipalContext(ContextType.Domain);
             }
             else
@@ -265,8 +273,8 @@ namespace WA2AD
                 // We have all the credentials, so we're going to try to connect using those
                 Console.WriteLine("Going to connect with credentials...");
                 try
-                {
-                    this.pc = new PrincipalContext(ContextType.Domain, @adServer, @usersPath, ContextOptions.Negotiate, username, password);               
+                {                    
+                    this.pc = new PrincipalContext(ContextType.Domain, null, username, password);               
                 }
                 catch (Exception e)
                 {
