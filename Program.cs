@@ -32,7 +32,11 @@ namespace WA2AD
                 foreach (var obj in waData.GetMemberData().GetValue("Contacts"))
                 {
                     Member member = (Member)obj.ToObject<Member>();
-                                      
+
+                    // Our guinea pig for everything...
+                    //if (member.FirstName != "Testy" && member.LastName != "McTestface")
+                    //    continue;
+
                     try
                     {
                         Console.WriteLine("Going to work with " + member.FirstName + " " + member.LastName);

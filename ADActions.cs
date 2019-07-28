@@ -19,7 +19,20 @@ namespace WA2AD
 
         // The OU, read from the INI file, that we want to save the users to
         private string membersPath;
-  
+
+        // This is not cryptographically secure, and we are, in fact, using it for
+        // passwords, but we are generating useless, unknowable passwords that are
+        // not recorded anywhere; the user must go to the self-service portal to change
+        // his or her password to the "real" one they want to use, so nobody is really
+        // dependent on this level of security of thrown-away passwords.
+        private static Random random = new Random();
+        public static string RandomString(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            return new string(Enumerable.Repeat(chars, length)
+              .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
         // This method will add the users to the appropriate "computer groups" they
         // have been authorized on.
         // WARNING! The assumption is that the name of the authorization in Wild Apricot
@@ -154,7 +167,9 @@ namespace WA2AD
                 addOthePager(userPrincipal, rfidTag); 
             }
 
-            String pwdOfNewlyCreatedUser = "ps1@@12345!~";
+            // Generate a useless password that the user doesn't know so
+            // he or she must create a new one.
+            String pwdOfNewlyCreatedUser = RandomString(15);
             userPrincipal.SetPassword(pwdOfNewlyCreatedUser);
             userPrincipal.PasswordNotRequired = false;
 
@@ -185,12 +200,24 @@ namespace WA2AD
                 userPrincipal.Enabled = shouldBeEnabled;
             }
 
+            // They may have updated their email address
+            if (userPrincipal.UserPrincipalName != member.Email && (member.Email != null && member.Email.Length > 0))
+                // Can only use the first 256 characters (though never seen an
+                // email address that long, but okay....)
+                userPrincipal.UserPrincipalName = member.Email.Length > 256 ? member.Email.Substring(0, 256) : member.Email;
+
+
             // The user may have updated their RFID tag   
             FieldValue rfidTagFV = getValueForKey(member, "RFID Tag");
             if (rfidTagFV != null && rfidTagFV.ToString().Length > 0)
             {
-                string rfidTag = (string)rfidTagFV.Value;
-                addOthePager(userPrincipal, rfidTag);
+                // Split on a comma
+                string[] tokens = ((string)rfidTagFV.Value).Split(',');
+                foreach (var rfidTag in tokens)
+                {                 
+                    // Add the tag, but make sure there aren't any spaces around it
+                    addOthePager(userPrincipal, rfidTag.Trim());
+                }
             }
 
             // And update their group memberships
