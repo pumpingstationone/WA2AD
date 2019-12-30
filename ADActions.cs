@@ -39,9 +39,9 @@ namespace WA2AD
         // is *exactly* the same name as the OU in Active Directory. In other words, if
         // the user is authorized in "Boss Authorized Users" in WA, then the name of the
         // OU in Active Directory *must* be "Boss Authorized Users".
-        private void addUserToGroups(ref UserPrincipal userPrincipal, Member member)
+        private void addUserToGroups(string sectionName, ref UserPrincipal userPrincipal, Member member)
         {
-            FieldValue authGroups = getValueForKey(member, "Computer Authorizations");
+            FieldValue authGroups = getValueForKey(member, sectionName);
             if (authGroups != null)
             {
                 JArray authsObj = (JArray)authGroups.Value;
@@ -221,7 +221,9 @@ namespace WA2AD
             }
 
             // And update their group memberships
-            addUserToGroups(ref userPrincipal, member);
+            addUserToGroups("Computer Authorizations", ref userPrincipal, member);
+            // And do the same thing for the other authorizations (e.g. welders, lathe, etc.)
+            addUserToGroups("Authorizations", ref userPrincipal, member);
 
             try
             {
