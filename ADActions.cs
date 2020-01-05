@@ -45,7 +45,7 @@ namespace WA2AD
             if (authGroups != null)
             {
                 JArray authsObj = (JArray)authGroups.Value;
-                if (authsObj.Count() > 0)
+                if (authsObj != null && authsObj.Count() > 0)
                 {
                     for (int x = 0; x < authsObj.Count(); ++x)
                     {
@@ -127,7 +127,7 @@ namespace WA2AD
             PrincipalContext memberCtx = new PrincipalContext(ContextType.Domain, null, this.membersPath);
 
             UserPrincipal userPrincipal = new UserPrincipal(memberCtx);
-
+            
             if (member.LastName != null && member.LastName.Length > 0)
                 userPrincipal.Surname = member.LastName;
 
@@ -319,6 +319,13 @@ namespace WA2AD
             if (member.MembershipEnabled == false || member.MembershipLevel == null)
             {
                 Console.WriteLine("This person is not a member!");
+                return;
+            }
+
+            // But do nothing if the membership is still pending
+            if (member.Status == "PendingNew")
+            {
+                Console.WriteLine("Ah, but membership is still pending, so not going to add");
                 return;
             }
 
