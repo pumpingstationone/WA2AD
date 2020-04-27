@@ -316,7 +316,7 @@ namespace WA2AD
         public void HandleMember(Member member)
         {
             // Is this a real member, or just a contact?
-            if (member.MembershipEnabled == false || member.MembershipLevel == null)
+            if (member.MembershipLevel == null)
             {
                 Console.WriteLine("This person is not a member!");
                 return;
