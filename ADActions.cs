@@ -17,8 +17,17 @@ namespace WA2AD
 
         private PrincipalContext pc = null;
 
-        // The OU, read from the INI file, that we want to save the users to
+        // Security credentials in case we need them
+        private string username;
+        private string password;
+        private string adServer;
+
+
+        // The OU, read from the INI file, that we want to save the members to
         private string membersPath;
+
+        // The OU of the inactive member path
+        private string inactiveMembersPath;
 
         // The field in AD that we use to store RFID tags. This is an array of strings
         private string RFID_FIELD = "otherPager";
@@ -213,24 +222,53 @@ namespace WA2AD
             }
         }
 
+        // If the member is enabled, they should be in the ADUsersOU OU, otherwise
+        // they should be in the ADInactiveUsersOU
+        private void moveUserToGroup(ref UserPrincipal userPrincipal, bool shouldBeEnabled)
+        {
+            // Two flavors if we're in the domain, or not in the domain. There's enough differences
+            // in the function calls that it's just as well to have two separate blocks of code with
+            // nothing shared
+            if (this.username.Length > 0)
+            {
+                // We are *not* in the domain, so we need to build the full LDAP URL
+                // which includes the server IP for this to work (also note the use
+                // of login credentials below as well)
+                string userCN = String.Format("LDAP://{0}/{1}", this.adServer, userPrincipal.DistinguishedName);
+                string newOUForUser = String.Format("LDAP://{0}/{1}", this.adServer, shouldBeEnabled ? this.membersPath : this.inactiveMembersPath);
+
+                DirectoryEntry currentOU = new DirectoryEntry(userCN, this.username, this.password);
+                DirectoryEntry newOU = new DirectoryEntry(newOUForUser, this.username, this.password);
+                // And now actually move the user to the new OU
+                currentOU.MoveTo(newOU);
+                newOU.Close();
+                currentOU.Close();
+            }
+            else
+            {
+                // We are in the domain with a user that can do everything
+                // implicitly
+                string userCN = String.Format("LDAP://{0}", userPrincipal.DistinguishedName);
+                string newOUForUser = String.Format("LDAP://{0}", shouldBeEnabled ? this.membersPath : this.inactiveMembersPath);
+
+                DirectoryEntry currentOU = new DirectoryEntry(userCN);
+                DirectoryEntry newOU = new DirectoryEntry(newOUForUser);
+                // And now actually move the user to the new OU
+                currentOU.MoveTo(newOU);
+                newOU.Close();
+                currentOU.Close();
+            }            
+        }
+
         private void UpdateUser(Member member, ref UserPrincipal userPrincipal)
         {
-            // Just disable the password right now if we need to
-            bool isCurrentlyEnabled = (bool)userPrincipal.Enabled;
-            bool shouldBeEnabled = member.MembershipEnabled;
-            
-            if (isCurrentlyEnabled != shouldBeEnabled)
-            {
-                Console.WriteLine("Going to set " + member.FirstName + " " + member.LastName + "'s status to " + (shouldBeEnabled ? "enabled" : "disabled"));
-                userPrincipal.Enabled = shouldBeEnabled;
-            }
-
             // They may have updated their email address
             if (userPrincipal.UserPrincipalName != member.Email && (member.Email != null && member.Email.Length > 0))
+            {
                 // Can only use the first 256 characters (though never seen an
                 // email address that long, but okay....)
                 userPrincipal.UserPrincipalName = member.Email.Length > 256 ? member.Email.Substring(0, 256) : member.Email;
-
+            }
 
             // The user may have updated their RFID tag, so first we
             // reset the values in AD
@@ -257,6 +295,20 @@ namespace WA2AD
             // And do the same thing for the other authorizations (e.g. welders, lathe, etc.)
             addUserToGroups("Authorizations", ref userPrincipal, member);
 
+            // And now we determine whether the user is active or lapsed (set via WA), and
+            // we put the user in the appropriate OU based on that
+            bool isCurrentlyEnabled = (bool)userPrincipal.Enabled;
+            bool shouldBeEnabled = member.Status == "Lapsed" ? false : true;
+
+            if (isCurrentlyEnabled != shouldBeEnabled)
+            {
+                Console.WriteLine("Going to set " + member.FirstName + " " + member.LastName + "'s status to " + (shouldBeEnabled ? "enabled" : "disabled"));
+                userPrincipal.Enabled = shouldBeEnabled;
+                userPrincipal.Save();
+                moveUserToGroup(ref userPrincipal, shouldBeEnabled);
+            }
+
+            // And we're done modifying the user, so let's just save our remaining changes
             try
             {
                 userPrincipal.Save();
@@ -264,13 +316,12 @@ namespace WA2AD
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception creating user object. " + e);
+                Console.WriteLine("Exception when updating user object. " + e);
             }
         }
 
         private bool FindExistingUser(ref UserPrincipal user)
-        {
-           
+        {           
             PrincipalSearcher search = new PrincipalSearcher(user);
             UserPrincipal result = (UserPrincipal)search.FindOne();
             search.Dispose();
@@ -299,13 +350,15 @@ namespace WA2AD
 
             // The username with Domain Admin or comparable rights
             // in <Domain>\<User> format
-            string username = MyIni.Read("ADUser").Trim(); 
-            string password = MyIni.Read("ADPassword").Trim();
+            this.username = MyIni.Read("ADUser").Trim(); 
+            this.password = MyIni.Read("ADPassword").Trim();
             // The AD server name or IP address
-            string adServer = MyIni.Read("ADIPAddress").Trim();
+            this.adServer = MyIni.Read("ADIPAddress").Trim();
             // The LDAP path to the users
             // (e.g. CN=users,DC=ad,DC=organizationname,DC=org)
             this.membersPath = MyIni.Read("ADUsersOU").Trim();
+            // And this is for the inactive users
+            this.inactiveMembersPath = MyIni.Read("ADInactiveUsersOU").Trim();
 
             // If we don't have a CN, that's bad because we really need that one
             if (this.membersPath.Length == 0)
@@ -317,13 +370,25 @@ namespace WA2AD
             else
             {
                 appLog.WriteEntry(string.Format("Going to work with member objects in {0}", this.membersPath));
-                Console.WriteLine("Working member objects with: " + this.membersPath);
+                Console.WriteLine("Working with member objects with: " + this.membersPath);
+            }
+
+            if (this.inactiveMembersPath.Length == 0)
+            {
+                appLog.WriteEntry("WHOA! The Inactive CN needs to be set in the ini file! (The ADInactiveUsersOU property). Not going to continue because I don't know where to put anything!", EventLogEntryType.Error);
+                Console.WriteLine("WHOA! The Inactive CN needs to be set in the ini file! (The ADInactiveUsersOU property). Not going to continue because I don't know where to put anything!");
+                return;
+            }
+            else
+            {
+                appLog.WriteEntry(string.Format("Going to work with inactive member objects in {0}", this.inactiveMembersPath));
+                Console.WriteLine("Working with inactive member objects with: " + this.inactiveMembersPath);
             }
 
             // If we have a user/password/IP combo, then we'll assume
             // we're currently running on a machine that is *not* on the
             // domain we want to work with.
-            if (username.Length == 0 || password.Length == 0 || adServer.Length == 0)
+            if (this.username.Length == 0 || this.password.Length == 0 || this.adServer.Length == 0)
             {
                 Console.WriteLine("Ok, we're going to connect assuming we're on the domain, run by a user with appropriate permissions");
                 // We need to use this context so we have full access to the domain, and not just one part of it
@@ -335,7 +400,7 @@ namespace WA2AD
                 Console.WriteLine("Going to connect with credentials...");
                 try
                 {                    
-                    this.pc = new PrincipalContext(ContextType.Domain, adServer, username, password);               
+                    this.pc = new PrincipalContext(ContextType.Domain, this.adServer, this.username, this.password);               
                 }
                 catch (Exception e)
                 {
