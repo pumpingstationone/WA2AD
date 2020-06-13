@@ -197,8 +197,10 @@ namespace WA2AD
             userPrincipal.PasswordNotRequired = false;
 
             userPrincipal.Enabled = true;
-            userPrincipal.ExpirePasswordNow();         
+            userPrincipal.ExpirePasswordNow();
 
+            // Set the "Employee ID" to the WA member ID
+            userPrincipal.EmployeeId = member.Id.ToString();
 
             try
             {
@@ -247,6 +249,9 @@ namespace WA2AD
                 }
             }
 
+            // Set the "Employee ID" to the WA member ID
+            userPrincipal.EmployeeId = member.Id.ToString();
+            
             // And update their group memberships
             addUserToGroups("Computer Authorizations", ref userPrincipal, member);
             // And do the same thing for the other authorizations (e.g. welders, lathe, etc.)
