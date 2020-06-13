@@ -20,6 +20,9 @@ namespace WA2AD
         // The OU, read from the INI file, that we want to save the users to
         private string membersPath;
 
+        // The field in AD that we use to store RFID tags. This is an array of strings
+        private string RFID_FIELD = "otherPager";
+
         // This is not cryptographically secure, and we are, in fact, using it for
         // passwords, but we are generating useless, unknowable passwords that are
         // not recorded anywhere; the user must go to the self-service portal to change
@@ -69,7 +72,24 @@ namespace WA2AD
             }
         }
 
-        private void addOthePager(Principal userPrincipal, string rfidTag)
+
+        // This method clears out the RFID tag array for the user in preparation
+        // for the tags to be added from Wild Apricot. By resetting the array, we
+        // handle any removes or edits, and thus can be sure that whatever is in
+        // the array when we're all done is what is really reflective of what the
+        // user's tag status is in WA.
+        private void resetRFIDField(Principal userPrincipal)
+        {
+            userPrincipal.Save();
+            DirectoryEntry de = (userPrincipal.GetUnderlyingObject() as DirectoryEntry);
+            if (de != null)
+            {
+                de.Properties[RFID_FIELD].Clear();
+                de.CommitChanges();
+            }
+        }
+
+        private void addRFIDTag(Principal userPrincipal, string rfidTag)
         {
             if (rfidTag == null || rfidTag.Length == 0)
                 return;
@@ -80,25 +100,25 @@ namespace WA2AD
             {
 #if DEBUG
                 DirectorySearcher deSearch = new DirectorySearcher(de);
-                deSearch.PropertiesToLoad.Add("otherPager");
+                deSearch.PropertiesToLoad.Add(RFID_FIELD);
                 SearchResultCollection results = deSearch.FindAll();
                 if (results != null && results.Count > 0)
                 {
                     ResultPropertyCollection rpc = results[0].Properties;
                     foreach (string rp in rpc.PropertyNames)
                     {
-                        if (rp == "otherpager")
+                        if (rp == RFID_FIELD)
                         {
-                            int pagerCount = rpc["otherpager"].Count;
+                            int pagerCount = rpc[RFID_FIELD].Count;
                             for (int x = 0; x < pagerCount; ++x)
                             {
-                                Console.WriteLine(rpc["otherpager"][x].ToString());
+                                Console.WriteLine(rpc[RFID_FIELD][x].ToString());
                             }
                         }
                     }
                 }
 #endif
-                de.Properties["otherPager"].Add(rfidTag);
+                de.Properties[RFID_FIELD].Add(rfidTag);
                 de.CommitChanges();
             }
         }
@@ -159,12 +179,15 @@ namespace WA2AD
                 // email address that long, but okay....)
                 userPrincipal.UserPrincipalName = member.Email.Length > 256 ? member.Email.Substring(0, 256) : member.Email;
 
-            // The user may have an RFID tag       
+            // The user may have an RFID tag
+            // We want to make sure there are no tags for the user
+            resetRFIDField(userPrincipal);
+            // Now we add any tags
             FieldValue rfidTagFV = getValueForKey(member, "RFID Tag");
             if (rfidTagFV != null && rfidTagFV.ToString().Length > 0)
             {
                 string rfidTag = (string)rfidTagFV.Value;
-                addOthePager(userPrincipal, rfidTag); 
+                addRFIDTag(userPrincipal, rfidTag.Trim()); 
             }
 
             // Generate a useless password that the user doesn't know so
@@ -207,7 +230,11 @@ namespace WA2AD
                 userPrincipal.UserPrincipalName = member.Email.Length > 256 ? member.Email.Substring(0, 256) : member.Email;
 
 
-            // The user may have updated their RFID tag   
+            // The user may have updated their RFID tag, so first we
+            // reset the values in AD
+            resetRFIDField(userPrincipal);
+            // Now, having wiped out the previous value, let's see if there
+            // are any tags
             FieldValue rfidTagFV = getValueForKey(member, "RFID Tag");
             if (rfidTagFV != null && rfidTagFV.ToString().Length > 0)
             {
@@ -216,7 +243,7 @@ namespace WA2AD
                 foreach (var rfidTag in tokens)
                 {                 
                     // Add the tag, but make sure there aren't any spaces around it
-                    addOthePager(userPrincipal, rfidTag.Trim());
+                    addRFIDTag(userPrincipal, rfidTag.Trim());
                 }
             }
 
@@ -303,7 +330,7 @@ namespace WA2AD
                 Console.WriteLine("Going to connect with credentials...");
                 try
                 {                    
-                    this.pc = new PrincipalContext(ContextType.Domain, null, username, password);               
+                    this.pc = new PrincipalContext(ContextType.Domain, adServer, username, password);               
                 }
                 catch (Exception e)
                 {
