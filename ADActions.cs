@@ -153,7 +153,15 @@ namespace WA2AD
 
             // We create a specific context when creating a new member so the object is stored
             // in the right place in the domain (as set in the ini file)
-            PrincipalContext memberCtx = new PrincipalContext(ContextType.Domain, null, this.membersPath);
+            PrincipalContext memberCtx;
+            if (this.username.Length > 0)
+            {
+                memberCtx = new PrincipalContext(ContextType.Domain, this.adServer, this.membersPath, this.username, this.password);
+            }
+            else
+            {
+                memberCtx = new PrincipalContext(ContextType.Domain, null, this.membersPath);
+            }
 
             UserPrincipal userPrincipal = new UserPrincipal(memberCtx);
             
@@ -201,7 +209,7 @@ namespace WA2AD
 
             // Generate a useless password that the user doesn't know so
             // he or she must create a new one.
-            String pwdOfNewlyCreatedUser = RandomString(15);
+            String pwdOfNewlyCreatedUser = RandomString(15) + "!?";
             userPrincipal.SetPassword(pwdOfNewlyCreatedUser);
             userPrincipal.PasswordNotRequired = false;
 
@@ -300,6 +308,7 @@ namespace WA2AD
             bool isCurrentlyEnabled = (bool)userPrincipal.Enabled;
             bool shouldBeEnabled = member.Status == "Lapsed" ? false : true;
 
+            /*
             if (isCurrentlyEnabled != shouldBeEnabled)
             {
                 Console.WriteLine("Going to set " + member.FirstName + " " + member.LastName + "'s status to " + (shouldBeEnabled ? "enabled" : "disabled"));
@@ -307,6 +316,7 @@ namespace WA2AD
                 userPrincipal.Save();
                 moveUserToGroup(ref userPrincipal, shouldBeEnabled);
             }
+            */
 
             // And we're done modifying the user, so let's just save our remaining changes
             try
