@@ -198,14 +198,16 @@ namespace WA2AD
 
             // The user may have an RFID tag
             // We want to make sure there are no tags for the user
-            resetRFIDField(userPrincipal);
+            //resetRFIDField(userPrincipal);
             // Now we add any tags
+            /*
             FieldValue rfidTagFV = getValueForKey(member, "RFID Tag");
             if (rfidTagFV != null && rfidTagFV.ToString().Length > 0)
             {
                 string rfidTag = (string)rfidTagFV.Value;
                 addRFIDTag(userPrincipal, rfidTag.Trim()); 
             }
+            */
 
             // Generate a useless password that the user doesn't know so
             // he or she must create a new one.
@@ -308,15 +310,15 @@ namespace WA2AD
             bool isCurrentlyEnabled = (bool)userPrincipal.Enabled;
             bool shouldBeEnabled = member.Status == "Lapsed" ? false : true;
 
-            /*
+            
             if (isCurrentlyEnabled != shouldBeEnabled)
             {
                 Console.WriteLine("Going to set " + member.FirstName + " " + member.LastName + "'s status to " + (shouldBeEnabled ? "enabled" : "disabled"));
                 userPrincipal.Enabled = shouldBeEnabled;
                 userPrincipal.Save();
-                moveUserToGroup(ref userPrincipal, shouldBeEnabled);
+                //moveUserToGroup(ref userPrincipal, shouldBeEnabled);
             }
-            */
+            
 
             // And we're done modifying the user, so let's just save our remaining changes
             try
