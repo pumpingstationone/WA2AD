@@ -280,6 +280,14 @@ namespace WA2AD
                 userPrincipal.UserPrincipalName = member.Email.Length > 256 ? member.Email.Substring(0, 256) : member.Email;
             }
 
+            // And do the same for the mail field
+            if (userPrincipal.EmailAddress != member.Email && (member.Email != null && member.Email.Length > 0))
+            {
+                // Can only use the first 256 characters (though never seen an
+                // email address that long, but okay....)
+                userPrincipal.EmailAddress = member.Email.Length > 256 ? member.Email.Substring(0, 256) : member.Email;
+            }
+
             // The user may have updated their RFID tag, so first we
             // reset the values in AD
             resetRFIDField(userPrincipal);
