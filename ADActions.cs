@@ -7,6 +7,7 @@ using System.DirectoryServices;
 using System.DirectoryServices.AccountManagement;
 using System.Diagnostics;
 using Newtonsoft.Json.Linq;
+using System.IO.MemoryMappedFiles;
 
 namespace WA2AD
 {
@@ -317,8 +318,34 @@ namespace WA2AD
             // we put the user in the appropriate OU based on that
             bool isCurrentlyEnabled = (bool)userPrincipal.Enabled;
             bool shouldBeEnabled = member.Status == "Lapsed" ? false : true;
+            // We also need to check three other things, whether they've signed
+            // the extra essentials waiver, whether they've completed orientation,
+            // and whether they're enabled via the master "enabled" switch
+            var efc = getValueForKey(member, "Essentials Form Completed");
+            var oc = getValueForKey(member, "Orientation Completed");
+            var mks = getValueForKey(member, "Enabled");
+            // And if *any* of the previous three are null, the member is
+            // to be set as *not* enabled, regardless of any other circumstance
+            var mustDisable = false;
+            if (mks.Value != null)
+            {
+                // If the field is not null, we have to see what the value is, and
+                // if it's "No", then we disable
+                JObject mksVal = JObject.Parse(mks.Value.ToString());
 
-            
+                var isEnabled = (string)mksVal.GetValue("Label");
+                if (isEnabled == "No")
+                {
+                    mustDisable = true;
+                }
+            }
+
+            if (efc.Value == null || oc.Value == null || mks.Value == null || mustDisable == true)
+            {
+                Console.WriteLine("We are explicitly disabling " + member.FirstName + " " + member.LastName);
+                shouldBeEnabled = false;
+            }
+
             if (isCurrentlyEnabled != shouldBeEnabled)
             {
                 Console.WriteLine("Going to set " + member.FirstName + " " + member.LastName + "'s status to " + (shouldBeEnabled ? "enabled" : "disabled"));
