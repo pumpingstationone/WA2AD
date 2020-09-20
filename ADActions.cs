@@ -333,8 +333,8 @@ namespace WA2AD
             {
                 JObject mksVal = JObject.Parse(mks.Value.ToString());
 
-                var isEnabled = (string)mksVal.GetValue("Label");
-                if (isEnabled == "Yes")
+                var isDisabled = (string)mksVal.GetValue("Label");
+                if (isDisabled == "Yes")
                 {
                     mustDisable = true;
                 }
