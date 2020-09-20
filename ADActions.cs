@@ -318,29 +318,29 @@ namespace WA2AD
             // we put the user in the appropriate OU based on that
             bool isCurrentlyEnabled = (bool)userPrincipal.Enabled;
             bool shouldBeEnabled = member.Status == "Lapsed" ? false : true;
+            
             // We also need to check three other things, whether they've signed
             // the extra essentials waiver, whether they've completed orientation,
-            // and whether they're enabled via the master "enabled" switch
+            // and whether they're disabled via the master "disabled" switch
             var efc = getValueForKey(member, "Essentials Form Completed");
             var oc = getValueForKey(member, "Orientation Completed");
-            var mks = getValueForKey(member, "Enabled");
-            // And if *any* of the previous three are null, the member is
-            // to be set as *not* enabled, regardless of any other circumstance
+            var mks = getValueForKey(member, "Disabled");
+           
+            // The member is disabled if the field is not null and explicitly
+            // set to Yes
             var mustDisable = false;
             if (mks.Value != null)
             {
-                // If the field is not null, we have to see what the value is, and
-                // if it's "No", then we disable
                 JObject mksVal = JObject.Parse(mks.Value.ToString());
 
                 var isEnabled = (string)mksVal.GetValue("Label");
-                if (isEnabled == "No")
+                if (isEnabled == "Yes")
                 {
                     mustDisable = true;
                 }
             }
 
-            if (efc.Value == null || oc.Value == null || mks.Value == null || mustDisable == true)
+            if (efc.Value == null || oc.Value == null || mustDisable == true)
             {
                 Console.WriteLine("We are explicitly disabling " + member.FirstName + " " + member.LastName);
                 shouldBeEnabled = false;
