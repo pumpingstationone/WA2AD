@@ -339,10 +339,17 @@ namespace WA2AD
                     mustDisable = true;
                 }
             }
-
+            /*
             if (efc.Value == null || oc.Value == null || mustDisable == true)
             {
                 Console.WriteLine("We are explicitly disabling " + member.FirstName + " " + member.LastName);
+                shouldBeEnabled = false;
+            }
+            */
+
+            // Last check of membership status
+            if (member.MembershipEnabled == false)
+            {
                 shouldBeEnabled = false;
             }
 
@@ -472,6 +479,7 @@ namespace WA2AD
                 Console.WriteLine("Ah, but membership is still pending, so not going to add");
                 return;
             }
+
 
             UserPrincipal u = new UserPrincipal(pc)
             {
