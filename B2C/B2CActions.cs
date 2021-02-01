@@ -247,7 +247,7 @@ namespace WA2AD
                     // Oh, hey, we found the user, so we'll see if we
                     // need to do any updates
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine(string.Format("{0} is in B2C, so we're going to do any updates", u.DisplayName));
+                    Console.WriteLine(string.Format("{0} is in B2C, so we're going to do any updates", u.Name));
                     Console.ResetColor();
 
                     Task<bool> updateTask = ReallyUpdateUser(isMemberEnabled, member, u, existingUser);
