@@ -23,7 +23,6 @@ namespace WA2AD
         private string password;
         private string adServer;
 
-
         // The OU, read from the INI file, that we want to save the members to
         private string membersPath;
 
@@ -39,6 +38,10 @@ namespace WA2AD
         // his or her password to the "real" one they want to use, so nobody is really
         // dependent on this level of security of thrown-away passwords.
         private static Random random = new Random();
+
+        // Our connection to the Azure B2C stuff
+        private B2CActions b2cActions = new B2CActions();
+
         public static string RandomString(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -271,7 +274,9 @@ namespace WA2AD
             }            
         }
 
-        private void UpdateUser(Member member, ref UserPrincipal userPrincipal)
+        // The boolean is to indicate whether the member is enabled or not
+        // (used to set the appropriate status in B2C)
+        private bool UpdateUser(Member member, ref UserPrincipal userPrincipal)
         {
             // They may have updated their email address
             if (userPrincipal.UserPrincipalName != member.Email && (member.Email != null && member.Email.Length > 0))
@@ -372,6 +377,8 @@ namespace WA2AD
             {
                 Console.WriteLine("Exception when updating user object. " + e);
             }
+
+            return shouldBeEnabled;
         }
 
         private bool FindExistingUser(ref UserPrincipal user)
@@ -489,12 +496,34 @@ namespace WA2AD
             if (FindExistingUser(ref u)) 
             {
                 Console.WriteLine("Oh, hey, found " + member.FirstName + " in AD");
-                UpdateUser(member, ref u);
+                bool isMemberEnabled = UpdateUser(member, ref u);
+
+                this.b2cActions.UpdateUser(isMemberEnabled, member, u);
             }
             else
             {
                 Console.WriteLine("Didn't find " + member.FirstName + " in AD, so must be new...");
                 CreateUser(member);
+
+                // Now we need to get the AD object so we can update B2C with it
+                UserPrincipal newU = new UserPrincipal(pc)
+                {
+                    SamAccountName = (string)member.FieldValues[FieldValue.ADUSERNAME].Value
+                };
+
+                if (FindExistingUser(ref newU) == false)
+                {
+                    appLog.WriteEntry(string.Format("Hmm, we just created the user {0} in AD, but couldn't find it", (string)member.FieldValues[FieldValue.ADUSERNAME].Value), EventLogEntryType.Warning);
+                    
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("Hmm, we just created the user {0} in AD, but couldn't find it " + (string)member.FieldValues[FieldValue.ADUSERNAME].Value);
+                    Console.ResetColor();
+                    
+                    // And we're not gonna continue
+                    return;
+                }
+
+                this.b2cActions.AddNewUser(newU, member.Id);
             }           
         }
     }
