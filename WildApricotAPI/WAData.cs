@@ -7,9 +7,9 @@ using System.Net.Http;
 using Newtonsoft.Json.Linq;
 using System.Diagnostics;
 
-namespace WA2AD
+namespace WildApricotAPI
 {
-    class WAData
+    public class WAData
     {
         private static readonly HttpClient client = new HttpClient();
 
@@ -58,7 +58,27 @@ namespace WA2AD
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, this.contactUrl);
             request.Headers.Add("Authorization", "Bearer " + this.oauthToken);
 
-            return SendRequest(request).Result;
+            // We try five times to get the data
+            for (int x = 0; x < 5; ++x)
+            {
+                // Actually get the data from Wild Apricot
+                JObject memberData = SendRequest(request).Result;
+                // Successful?
+                if (memberData != null)
+                {
+                    // Yep, so return it for whatever usage
+                    return memberData;
+                }
+
+                // Crap, not successful, so let's sleep for a second before
+                // trying again
+                appLog.WriteEntry("Hmm, couldn't get the data from WA, so gonna try again");
+                Console.WriteLine("Hmm, couldn't get the data from WA, so gonna try again");
+                System.Threading.Thread.Sleep(1000);
+            }
+
+            // If we're here we weren't able to get the data after five tries. WTF?
+            return null;
         }
 
         private void GetMemberListUrl()
@@ -89,20 +109,13 @@ namespace WA2AD
             this.accountId = (string)dataObj.SelectToken("Permissions[0].AccountId");
         }
 
-        public WAData()
+        public WAData(string apiToken, string logSource)
         {
-            this.appLog = new EventLog("Application");
-            appLog.Source = "WA2AD";
+            // Gotta have a token to do anything useful
+            this.apiToken = apiToken;
 
-            // Get our token from the ini file
-            var MyIni = new IniFile();
-            this.apiToken = MyIni.Read("WAToken").Trim();
-            if (this.apiToken.Length == 0)
-            {
-                appLog.WriteEntry("Whoops, can't get the WA oauth token! Check the ini file is in the same dir as the executable and set properly!", EventLogEntryType.Error);
-                Console.WriteLine("Whoops, can't get the WA oauth token! Check the ini file is in the same dir as the executable and set properly!");
-                return;
-            }
+            this.appLog = new EventLog("Application");
+            appLog.Source = logSource;
 
             appLog.WriteEntry("Starting to get the data from Wild Apricot...");
             Console.WriteLine("Starting to get the data from Wild Apricot...");
