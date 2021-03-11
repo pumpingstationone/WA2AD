@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.DirectoryServices.AccountManagement;
 using System.Threading.Tasks;
+using WildApricotAPI;
 
 namespace WA2AD
 {
