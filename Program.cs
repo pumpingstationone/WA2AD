@@ -1,24 +1,28 @@
 ﻿using System;
 using System.Diagnostics;
 using WildApricotAPI;
-//
-// For this program to write to the Event Log properly, run
-// this command using an elevated power shell:
-//
-//       New-EventLog -LogName Application -Source "WA2AD"
-//
 
 namespace WA2AD
 {
     class Program
-    {        
-        private ADActions adActions = new ADActions();
-      
+    {
+        EventLogTraceListener wa2adTraceListener = new EventLogTraceListener("WA2AD");
+
+        private ADActions adActions = null;
+
+        private void HandleLogEvent(object sender, WAEventArgs e)
+        {
+            Log.Write((Log.Level)e.MessageLevel, e.Message);
+        }
+
         public Program()
-        {           
-            var appLog = new EventLog("Application");
-            appLog.Source = "WA2AD";
-            appLog.WriteEntry("Beginning job...");
+        {
+            Trace.Listeners.Add(this.wa2adTraceListener);            
+            Log.Write(Log.Level.Informational, "Beginning job...");
+
+            // Here we're instantiating the object that handled all the Active Directory
+            // work (it also calls the B2C stuff as well)
+            this.adActions = new ADActions();
 
             // First we need to get the api token to pass to the WA DLL
             // Get our token from the ini file
@@ -26,15 +30,14 @@ namespace WA2AD
             string waAPIToken = MyIni.Read("WAToken").Trim();
             if (waAPIToken.Length == 0)
             {
-                appLog.WriteEntry("Whoops, can't get the WA oauth token! Check the ini file is in the same dir as the executable and set properly!", EventLogEntryType.Error);
-                Console.WriteLine("Whoops, can't get the WA oauth token! Check the ini file is in the same dir as the executable and set properly!");
+                Log.Write(Log.Level.Error, "Whoops, can't get the WA oauth token! Check the ini file is in the same dir as the executable and set properly!");                
                 return;
             }
 
-            // Sweet, we got a token, so we can use that. We also
-            // pass the application source name so the DLL can use the
-            // same source name
-            WAData waData = new WAData(waAPIToken, appLog.Source);
+            // Sweet, we got a token, so we can use that. 
+            WAData waData = new WAData(waAPIToken);
+            // And we'll get the events from the DLL here for logging
+            waData.RaiseCustomEvent += HandleLogEvent;
 
             try
             {
@@ -51,28 +54,26 @@ namespace WA2AD
 
                     try
                     {
-                        Console.WriteLine("Going to work with " + member.FirstName + " " + member.LastName);
+                        Log.Write(Log.Level.Informational, "Going to work with " + member.FirstName + " " + member.LastName);
                         adActions.HandleMember(member);
                     }
                     catch (Exception me)
-                    {                        
-                        appLog.WriteEntry(string.Format("Hmm, An error occurred when working with {0}: '{1}'", member.FirstName, me), EventLogEntryType.Error);
-                        Console.WriteLine("Hmm, An error occurred when working with {0}: '{1}'", member.FirstName, me);
+                    {                                                
+                        Log.Write(Log.Level.Error, string.Format("Hmm, An error occurred when working with {0}: '{1}'", member.FirstName, me));
                     }
                 }
             }
             catch (Exception e)
             {
-                appLog.WriteEntry(string.Format("An error occurred: '{0}'", e), EventLogEntryType.Error);
-                Console.WriteLine("An error occurred: '{0}'", e);
+                Log.Write(Log.Level.Error, string.Format("An error occurred: '{0}'", e));                
             }
 
-            appLog.WriteEntry("...Finished job");
+            Log.Write(Log.Level.Informational, "...Finished job");
         }
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Starting...");
+            Log.Write(Log.Level.Informational, "Starting...");
 
             new Program();
         }

@@ -10,29 +10,55 @@ using Newtonsoft.Json;
 
 namespace WildApricotAPI
 {
+    // Our event that we'll send back to the caller of this
+    // library if they're interested in getting messages
+    public class WAEventArgs : EventArgs
+    {
+        public enum Level
+        {
+            Informational,
+            Warning,
+            Error
+        }
+
+        public WAEventArgs(Level level, string message)
+        {
+            Message = message;
+            MessageLevel = level;
+        }
+
+        public string Message { get; set; }
+        public Level MessageLevel { get; set; }
+    }
+
     public class WAData
     {
+        // We don't work with logging anything explicitly here, instead
+        // we throw it back to the caller to deal with it
+        public event EventHandler<WAEventArgs> RaiseCustomEvent;
+
         private static readonly HttpClient client = new HttpClient();
-
-        // For writing to the system event log (See program.cs for how to make sure this works)
-        private EventLog appLog;
-
+     
         // The token is authorized-application-specific to your Wild Apricot account
         private string apiToken = "";
 
         private string oauthToken;
         private string accountId;
-
-        private bool logToEventLog = false;
-
-        private void Log(string line)
+       
+        protected virtual void OnRaiseCustomEvent(WAEventArgs e)
         {
-            if (logToEventLog)
-            { 
-                appLog.WriteEntry(line);
-            }
+            EventHandler<WAEventArgs> raiseEvent = RaiseCustomEvent;
 
-            Console.WriteLine(line);
+            // Event will be null if there are no subscribers
+            if (raiseEvent != null)
+            {                           
+                raiseEvent(this, e);
+            }
+        }
+
+        private void Log(WAEventArgs.Level level, string message)
+        {
+            OnRaiseCustomEvent(new WAEventArgs(level, message));
         }
 
         private static string Base64Encode(string plainText)
@@ -92,7 +118,7 @@ namespace WildApricotAPI
 
                 // Crap, not successful, so let's sleep for a second before
                 // trying again
-                Log("Hmm, couldn't get the data from WA, so gonna try again");
+                Log(WAEventArgs.Level.Warning, "Hmm, couldn't get the data from WA, so gonna try again");
                 System.Threading.Thread.Sleep(1000);
             }
 
@@ -130,7 +156,7 @@ namespace WildApricotAPI
                 return dataObj.GetValue("ResultUrl").ToString();
             }
 
-            Log("Starting to get all the member data from Wild Apricot...");
+            Log(WAEventArgs.Level.Informational, "Starting to get all the member data from Wild Apricot...");
 
             GetOauthToken();
 
@@ -139,23 +165,23 @@ namespace WildApricotAPI
             System.Threading.Thread.Sleep(5000);
             JObject memberData = GetWAData(resultsURL);
 
-            Log("Finished getting the data from Wild Apricot...");
+            Log(WAEventArgs.Level.Informational, "Finished getting the data from Wild Apricot...");
             
             if (memberData.HasValues)
             {
-                Log("...and we have data to work with.");
+                Log(WAEventArgs.Level.Informational, "...and we have data to work with.");
                 
                 return memberData;
             }
             
-            Log("...hmm, we don't have any data to work with!");
+            Log(WAEventArgs.Level.Warning, "...hmm, we don't have any data to work with!");
             
             return null;
         }
 
         public JObject GetMemberForWAID(string memberID)
         {
-            Log("Starting to get member data from Wild Apricot for id " + memberID + "...");
+            Log(WAEventArgs.Level.Informational, "Starting to get member data from Wild Apricot for id " + memberID + "...");
 
             GetOauthToken();
 
@@ -175,15 +201,15 @@ namespace WildApricotAPI
             System.Threading.Thread.Sleep(5000);
             JObject memberData = GetWAData(resultsURL);
 
-            Log("Finished getting the data from Wild Apricot...");
+            Log(WAEventArgs.Level.Informational, "Finished getting the data from Wild Apricot...");
             
             if (memberData.HasValues)
             {
-                Log("...and we have data to work with.");
+                Log(WAEventArgs.Level.Informational, "...and we have data to work with.");
                 return memberData;
             }
                 
-            Log("...hmm, we don't have any data to work with!");                
+            Log(WAEventArgs.Level.Error, "...hmm, we don't have any data to work with!");                
             return null;
         }
 
@@ -209,21 +235,10 @@ namespace WildApricotAPI
             return SaveMember(memberData);
         }
 
-        public WAData(string apiToken, string logSource)
-        {
-            // Gotta have a token to do anything useful
-            this.apiToken = apiToken;
-            
-            // And we'll log
-            this.logToEventLog = true;
-            this.appLog = new EventLog("Application");
-            appLog.Source = logSource;
-        }
-
         public WAData(string apiToken)
         {
             // Gotta have a token to do anything useful
-            this.apiToken = apiToken;
-        }
+            this.apiToken = apiToken;          
+        }       
     }
 }

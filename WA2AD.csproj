@@ -136,6 +136,7 @@
     <Compile Include="B2C\B2CActions.cs" />
     <Compile Include="B2C\UserModel.cs" />
     <Compile Include="IniFile.cs" />
+    <Compile Include="Log.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

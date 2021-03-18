@@ -9,10 +9,7 @@ using WildApricotAPI;
 namespace WA2AD
 {
     class ADActions
-    {
-        // For writing to the system event log (See program.cs for how to make sure this works)
-        private EventLog appLog;
-
+    {      
         private PrincipalContext pc = null;
 
         // Security credentials in case we need them
@@ -176,7 +173,7 @@ namespace WA2AD
                 userPrincipal.EmailAddress = member.Email;
             else
             { 
-                Console.WriteLine("No email set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
+                Log.Write(Log.Level.Warning, "No email set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
                 return;
             }
 
@@ -186,7 +183,7 @@ namespace WA2AD
                 userPrincipal.SamAccountName = userLogonName.Length > 20 ? userLogonName.Substring(0, 20) : userLogonName;
             else
             {
-                Console.WriteLine("No username set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
+                Log.Write(Log.Level.Warning, "No username set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
                 return;
             }
 
@@ -225,11 +222,11 @@ namespace WA2AD
             try
             {
                 userPrincipal.Save();
-                Console.WriteLine("Created a new user for " + member.FirstName + " " + member.LastName);
+                Log.Write(Log.Level.Informational, "Created a new user for " + member.FirstName + " " + member.LastName);
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception creating user object for " + member.FirstName + " " + member.LastName + " -> " + e);
+                Log.Write(Log.Level.Error, "Exception creating user object for " + member.FirstName + " " + member.LastName + " -> " + e);
             }
         }
 
@@ -357,9 +354,10 @@ namespace WA2AD
 
             if (isCurrentlyEnabled != shouldBeEnabled)
             {
-                Console.WriteLine("Going to set " + member.FirstName + " " + member.LastName + "'s status to " + (shouldBeEnabled ? "enabled" : "disabled"));
+                Log.Write(Log.Level.Warning, "Going to set " + member.FirstName + " " + member.LastName + "'s status to " + (shouldBeEnabled ? "enabled" : "disabled"));
                 userPrincipal.Enabled = shouldBeEnabled;
                 userPrincipal.Save();
+                // And put the person in the right OU
                 //moveUserToGroup(ref userPrincipal, shouldBeEnabled);
             }
             
@@ -368,11 +366,11 @@ namespace WA2AD
             try
             {
                 userPrincipal.Save();
-                Console.WriteLine("Updated user " + member.FirstName + " " + member.LastName);
+                Log.Write(Log.Level.Informational, "Updated user " + member.FirstName + " " + member.LastName);
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception when updating user object. " + e);
+                Log.Write(Log.Level.Error, "Exception when updating user object. " + e);
             }
 
             return shouldBeEnabled;
@@ -392,10 +390,7 @@ namespace WA2AD
         }
 
         public ADActions()
-        {
-            this.appLog = new EventLog("Application");
-            appLog.Source = "WA2AD";
-
+        {            
             //
             // Load the active directory settings from the ini file. If there
             // aren't any then we'll move blindly ahead assuming that the machine
@@ -421,26 +416,22 @@ namespace WA2AD
             // If we don't have a CN, that's bad because we really need that one
             if (this.membersPath.Length == 0)
             {
-                appLog.WriteEntry("WHOA! The CN needs to be set in the ini file! (The ADUsersOU property). Not going to continue because I don't know where to put anything!", EventLogEntryType.Error);
-                Console.WriteLine("WHOA! The CN needs to be set in the ini file! (The ADUsersOU property). Not going to continue because I don't know where to put anything!");
+                Log.Write(Log.Level.Error, "WHOA! The CN needs to be set in the ini file! (The ADUsersOU property). Not going to continue because I don't know where to put anything!");                
                 return;
             }
             else
             {
-                appLog.WriteEntry(string.Format("Going to work with member objects in {0}", this.membersPath));
-                Console.WriteLine("Working with member objects with: " + this.membersPath);
+                Log.Write(Log.Level.Informational, string.Format("Going to work with member objects in {0}", this.membersPath));                
             }
 
             if (this.inactiveMembersPath.Length == 0)
             {
-                appLog.WriteEntry("WHOA! The Inactive CN needs to be set in the ini file! (The ADInactiveUsersOU property). Not going to continue because I don't know where to put anything!", EventLogEntryType.Error);
-                Console.WriteLine("WHOA! The Inactive CN needs to be set in the ini file! (The ADInactiveUsersOU property). Not going to continue because I don't know where to put anything!");
+                Log.Write(Log.Level.Error, "WHOA! The Inactive CN needs to be set in the ini file! (The ADInactiveUsersOU property). Not going to continue because I don't know where to put anything!");                
                 return;
             }
             else
             {
-                appLog.WriteEntry(string.Format("Going to work with inactive member objects in {0}", this.inactiveMembersPath));
-                Console.WriteLine("Working with inactive member objects with: " + this.inactiveMembersPath);
+                Log.Write(Log.Level.Informational, string.Format("Going to work with inactive member objects in {0}", this.inactiveMembersPath));                
             }
 
             // If we have a user/password/IP combo, then we'll assume
@@ -448,22 +439,21 @@ namespace WA2AD
             // domain we want to work with.
             if (this.username.Length == 0 || this.password.Length == 0 || this.adServer.Length == 0)
             {
-                Console.WriteLine("Ok, we're going to connect assuming we're on the domain, run by a user with appropriate permissions");
+                Log.Write(Log.Level.Informational, "Ok, we're going to connect assuming we're on the domain, run by a user with appropriate permissions");
                 // We need to use this context so we have full access to the domain, and not just one part of it
                 this.pc = new PrincipalContext(ContextType.Domain);
             }
             else
             {
                 // We have all the credentials, so we're going to try to connect using those
-                Console.WriteLine("Going to connect with credentials...");
+                Log.Write(Log.Level.Informational, "Going to connect with credentials...");
                 try
                 {                    
                     this.pc = new PrincipalContext(ContextType.Domain, this.adServer, this.username, this.password);               
                 }
                 catch (Exception e)
                 {
-                    appLog.WriteEntry(string.Format("Hmm, failed to create PrincipalContext. Exception is: {0}", e), EventLogEntryType.Error);
-                    Console.WriteLine("Hmm, failed to create PrincipalContext. Exception is: " + e);
+                    Log.Write(Log.Level.Error, string.Format("Hmm, failed to create PrincipalContext. Exception is: {0}", e));
                 }
             }
         }
@@ -473,17 +463,16 @@ namespace WA2AD
             // Is this a real member, or just a contact?
             if (member.MembershipLevel == null)
             {
-                Console.WriteLine("This person is not a member!");
+                Log.Write(Log.Level.Warning, "This person is not a member!");
                 return;
             }
 
             // But do nothing if the membership is still pending
             if (member.Status == "PendingNew")
             {
-                Console.WriteLine("Ah, but membership is still pending, so not going to add");
+                Log.Write(Log.Level.Warning, "Ah, but membership is still pending, so not going to add");
                 return;
             }
-
 
             UserPrincipal u = new UserPrincipal(pc)
             {
@@ -492,14 +481,14 @@ namespace WA2AD
 
             if (FindExistingUser(ref u)) 
             {
-                Console.WriteLine("Oh, hey, found " + member.FirstName + " in AD");
+                Log.Write(Log.Level.Informational, "Oh, hey, found " + member.FirstName + " in AD");
                 bool isMemberEnabled = UpdateUser(member, ref u);
 
                 this.b2cActions.UpdateUser(isMemberEnabled, member, u);
             }
             else
             {
-                Console.WriteLine("Didn't find " + member.FirstName + " in AD, so must be new...");
+                Log.Write(Log.Level.Informational, "Didn't find " + member.FirstName + " in AD, so must be new...");
                 CreateUser(member);
 
                 // Now we need to get the AD object so we can update B2C with it
@@ -510,12 +499,8 @@ namespace WA2AD
 
                 if (FindExistingUser(ref newU) == false)
                 {
-                    appLog.WriteEntry(string.Format("Hmm, we just created the user {0} in AD, but couldn't find it", (string)member.FieldValues[FieldValue.ADUSERNAME].Value), EventLogEntryType.Warning);
-                    
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("Hmm, we just created the user {0} in AD, but couldn't find it " + (string)member.FieldValues[FieldValue.ADUSERNAME].Value);
-                    Console.ResetColor();
-                    
+                    Log.Write(Log.Level.Error, string.Format("Hmm, we just created the user {0} in AD, but couldn't find it", (string)member.FieldValues[FieldValue.ADUSERNAME].Value));
+                                       
                     // And we're not gonna continue
                     return;
                 }

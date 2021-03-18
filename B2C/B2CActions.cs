@@ -31,10 +31,7 @@ namespace WA2AD
                 return $"extension_{_b2cExtensionAppClientId}_{attributeName}";
             }
         }
-
-        // For writing to the system event log (See program.cs for how to make sure this works)
-        private EventLog appLog;
-
+        
         private string tenantId { get; set; }
         private string appId { get; set; }
         private string clientSecret { get; set; }
@@ -129,14 +126,10 @@ namespace WA2AD
                 Console.WriteLine(ex.Message);
                 Console.ResetColor();
 
-                appLog.WriteEntry(string.Format("Drat, got {0} when trying to create the B2C user for {1}", ex.Message, u.Name), EventLogEntryType.Error);
+                Log.Write(Log.Level.Error, string.Format("Drat, got {0} when trying to create the B2C user for {1}", ex.Message, u.Name));
             }
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(string.Format("Created the user {0} in B2C", u.Name));
-            Console.ResetColor();
-
-            appLog.WriteEntry(string.Format("Created the user {0} in B2C", u.Name), EventLogEntryType.Information);
+            Log.Write(Log.Level.Informational, string.Format("Created the user {0} in B2C", u.Name));
         }
 
         async Task<User> FindUserByADGuid(string userADGuid)
@@ -160,13 +153,8 @@ namespace WA2AD
                 }
             }
             catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(ex.Message);
-                Console.ResetColor();
-
-                appLog.WriteEntry(string.Format("Drat, got {0} when trying to find the B2C user with AD guid {1}", ex.Message, userADGuid), EventLogEntryType.Error);
-
+            {                
+                Log.Write(Log.Level.Error, string.Format("Drat, got {0} when trying to find the B2C user with AD guid {1}", ex.Message, userADGuid));
             }
 
             return null;
@@ -207,17 +195,13 @@ namespace WA2AD
                    .Request()
                    .UpdateAsync(user);
 
-                Console.WriteLine($"User with object ID '{user.Id}' successfully updated.");
+                Log.Write(Log.Level.Informational, $"User with object ID '{user.Id}' successfully updated.");
 
                 return true;
             }
             catch (Exception ex)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(ex.Message);
-                Console.ResetColor();
-
-                appLog.WriteEntry(string.Format("Drat, got {0} when trying to really update the B2C user for {1}", ex.Message, u.Name), EventLogEntryType.Error);
+            {               
+                Log.Write(Log.Level.Error, string.Format("Drat, got {0} when trying to really update the B2C user for {1}", ex.Message, u.Name));
             }
 
             return false;
@@ -235,21 +219,16 @@ namespace WA2AD
                 {
                     // User isn't in B2C, so we add it now if the member is enabled
                     if (isMemberEnabled == true)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine(string.Format("{0} is not in B2C, so we're going to add it now", u.DisplayName));
-                        Console.ResetColor();
-
+                    {                        
+                        Log.Write(Log.Level.Informational, string.Format("{0} is not in B2C, so we're going to add it now", u.DisplayName));                        
                         AddNewUser(u, member.Id);
                     }
                 }
                 else
                 {
                     // Oh, hey, we found the user, so we'll see if we
-                    // need to do any updates
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine(string.Format("{0} is in B2C, so we're going to do any updates", u.Name));
-                    Console.ResetColor();
+                    // need to do any updates                    
+                    Log.Write(Log.Level.Informational, string.Format("{0} is in B2C, so we're going to do any updates", u.Name));                    
 
                     Task<bool> updateTask = ReallyUpdateUser(isMemberEnabled, member, u, existingUser);
                     bool okay = updateTask.Result;
@@ -257,32 +236,20 @@ namespace WA2AD
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(ex.Message);
-                Console.ResetColor();
-
-                appLog.WriteEntry(string.Format("Drat, got {0} when trying to update the B2C user for {1}", ex.Message, u.Name), EventLogEntryType.Error);
+                Log.Write(Log.Level.Error, string.Format("Drat, got {0} when trying to update the B2C user for {1}", ex.Message, u.Name));
             }
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine(string.Format("Updated the user {0} in B2C", u.Name));
-            Console.ResetColor();
-
-            appLog.WriteEntry(string.Format("Updated the user {0} in B2C", u.Name), EventLogEntryType.Information);
+            Log.Write(Log.Level.Informational, string.Format("Updated the user {0} in B2C", u.Name));
         }
 
         public B2CActions()
-        {
-            this.appLog = new EventLog("Application");
-            appLog.Source = "WA2AD";
-
+        {          
             // Get our token from the ini file
             var MyIni = new IniFile();
             this.tenantId = MyIni.Read("TenantId").Trim();
             if (this.tenantId.Length == 0)
             {
-                appLog.WriteEntry("Whoops, can't get the B2C Tenant ID! Check the ini file is in the same dir as the executable and set properly!", EventLogEntryType.Error);
-                Console.WriteLine("Whoops, can't get the B2C Tenant ID! Check the ini file is in the same dir as the executable and set properly!");
+                Log.Write(Log.Level.Error, "Whoops, can't get the B2C Tenant ID! Check the ini file is in the same dir as the executable and set properly!");
                 return;
             }
 
