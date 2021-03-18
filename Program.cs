@@ -11,11 +11,11 @@ using WildApricotAPI;
 namespace WA2AD
 {
     class Program
-    {
+    {        
         private ADActions adActions = new ADActions();
       
         public Program()
-        {
+        {           
             var appLog = new EventLog("Application");
             appLog.Source = "WA2AD";
             appLog.WriteEntry("Beginning job...");
@@ -38,7 +38,9 @@ namespace WA2AD
 
             try
             {
-                foreach (var obj in waData.GetMemberData().GetValue("Contacts"))
+                var memberData = waData.GetAllMemberData();
+
+                foreach (var obj in memberData.GetValue("Contacts"))
                 {
                     Member member = (Member)obj.ToObject<Member>();
 

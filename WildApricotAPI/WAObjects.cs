@@ -37,5 +37,6 @@ namespace WildApricotAPI
         public string Url { get; set; }
         public bool IsAccountAdministrator { get; set; }
         public bool TermsOfUseAccepted { get; set; }
+        public string Password { get; set; }
     }
 }
