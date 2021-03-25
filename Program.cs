@@ -49,8 +49,7 @@ namespace WA2AD
 
                     // Our guinea pig for everything...
                     //if (member.FirstName != "Testy" || member.LastName != "McTestface")
-                    if (member.FirstName != "Ron" || member.LastName != "Olson")
-                            continue;
+                    //        continue;
 
                     try
                     {

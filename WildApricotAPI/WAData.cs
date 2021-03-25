@@ -107,12 +107,16 @@ namespace WildApricotAPI
             // We try five times to get the data
             for (int x = 0; x < 5; ++x)
             {
+                Log(WAEventArgs.Level.Informational, "Trying to get all the data, pass " + (x + 1));
                 // Actually get the data from Wild Apricot
                 JObject memberData = SendRequest(request).Result;
                 // Successful?
-                if (memberData != null)
+                if (memberData != null && memberData["State"].ToString() != "Processing")
                 {
+
                     // Yep, so return it for whatever usage
+                    Log(WAEventArgs.Level.Informational, "We got data!");
+
                     return memberData;
                 }
 
@@ -123,6 +127,7 @@ namespace WildApricotAPI
             }
 
             // If we're here we weren't able to get the data after five tries. WTF?
+            Log(WAEventArgs.Level.Error, "WTF? Why couldn't we get the member data?");
             return null;
         }
 
@@ -161,6 +166,7 @@ namespace WildApricotAPI
             GetOauthToken();
 
             string resultsURL = GetMemberListUrl();
+            Log(WAEventArgs.Level.Informational, "Our results URL is " + resultsURL);
 
             System.Threading.Thread.Sleep(5000);
             JObject memberData = GetWAData(resultsURL);

@@ -122,10 +122,6 @@ namespace WA2AD
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(ex.Message);
-                Console.ResetColor();
-
                 Log.Write(Log.Level.Error, string.Format("Drat, got {0} when trying to create the B2C user for {1}", ex.Message, u.Name));
             }
 
@@ -154,7 +150,10 @@ namespace WA2AD
             }
             catch (Exception ex)
             {                
-                Log.Write(Log.Level.Error, string.Format("Drat, got {0} when trying to find the B2C user with AD guid {1}", ex.Message, userADGuid));
+                // Note that we'll be in this block if the person isn't in B2C,
+                // which could be because they're new. So this message is a warning,
+                // not an error
+                Log.Write(Log.Level.Warning, string.Format("Drat, got {0} when trying to find the B2C user with AD guid {1}, which is to be expected if they're new", ex.Message, userADGuid));
             }
 
             return null;
@@ -220,7 +219,7 @@ namespace WA2AD
                     // User isn't in B2C, so we add it now if the member is enabled
                     if (isMemberEnabled == true)
                     {                        
-                        Log.Write(Log.Level.Informational, string.Format("{0} is not in B2C, so we're going to add it now", u.DisplayName));                        
+                        Log.Write(Log.Level.Informational, string.Format("{0} is not in B2C, so we're going to add it now", u.Name));                        
                         AddNewUser(u, member.Id);
                     }
                 }
