@@ -76,7 +76,7 @@ jobs:
 
     # Install dependencies
     - name: Install dependencies
-      run: dotnet add package Newtonsoft.Json --version 13.0.1
+      run: dotnet nuget add package Newtonsoft.Json --version 13.0.1
 
     # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
     - name: Setup MSBuild.exe
