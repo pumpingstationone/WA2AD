@@ -48,8 +48,8 @@ namespace WA2AD
                     Member member = (Member)obj.ToObject<Member>();
 
                     // Our guinea pig for everything...
-                    if (member.FirstName != "Testy" || member.LastName != "McTestface")                  
-                        continue;
+                    //if (member.FirstName != "Testy" || member.LastName != "McTestface")                  
+                    //    continue;
 
                     try
                     {
