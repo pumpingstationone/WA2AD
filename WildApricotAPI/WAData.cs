@@ -80,6 +80,7 @@ namespace WildApricotAPI
 
             using (var response = await client.SendAsync(message))
             {
+                System.Threading.Thread.Sleep(4000);
                 var responseString = await response.Content.ReadAsStringAsync();
                 JObject json = JObject.Parse(responseString);
 
