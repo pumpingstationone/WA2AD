@@ -104,29 +104,19 @@ namespace WildApricotAPI
         {
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, waResponseURL);
             request.Headers.Add("Authorization", "Bearer " + this.oauthToken);
-
-            // We try five times to get the data
-            for (int x = 0; x < 5; ++x)
+          
+            // Actually get the data from Wild Apricot
+            JObject memberData = SendRequest(request).Result;
+            // Successful?
+            if (memberData != null && memberData["State"].ToString() != "Processing")
             {
-                Log(WAEventArgs.Level.Informational, "Trying to get all the data, pass " + (x + 1));
-                // Actually get the data from Wild Apricot
-                JObject memberData = SendRequest(request).Result;
-                // Successful?
-                if (memberData != null && memberData["State"].ToString() != "Processing")
-                {
 
-                    // Yep, so return it for whatever usage
-                    Log(WAEventArgs.Level.Informational, "We got data!");
+                // Yep, so return it for whatever usage
+                Log(WAEventArgs.Level.Informational, "We got data!");
 
-                    return memberData;
-                }
-
-                // Crap, not successful, so let's sleep for a second before
-                // trying again
-                Log(WAEventArgs.Level.Warning, "Hmm, couldn't get the data from WA, so gonna try again");
-                System.Threading.Thread.Sleep(1000);
+                return memberData;
             }
-
+           
             // If we're here we weren't able to get the data after five tries. WTF?
             Log(WAEventArgs.Level.Error, "WTF? Why couldn't we get the member data?");
             return null;
