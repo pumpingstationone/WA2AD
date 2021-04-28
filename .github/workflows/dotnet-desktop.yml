@@ -81,10 +81,12 @@ jobs:
       env:
         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
 
-    - name: "Nuget Restore"
+    - name: "Nuget Restore Setup"
       uses: nuget/setup-nuget@v1
       with:
         nuget-version: '5.x'
+    
+    - name: "Run Nuget Restore"
       run: nuget restore $env:Solution_Name
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
