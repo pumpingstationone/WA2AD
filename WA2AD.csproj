@@ -207,8 +207,6 @@
     <None Include="ApplicationInsights.config" />
     <None Include="packages.config" />
     <None Include="WA2AD.ini" />
-    <None Include="WA2AD_1_TemporaryKey.pfx" />
-    <None Include="WA2AD_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
