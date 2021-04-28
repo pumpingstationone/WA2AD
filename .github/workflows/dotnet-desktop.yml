@@ -63,7 +63,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v2      
       with:
         fetch-depth: 0
 
@@ -80,6 +80,12 @@ jobs:
       uses: microsoft/setup-msbuild@2008f912f56e61277eefaac6d1888b750582aa16
       env:
         ACTIONS_ALLOW_UNSECURE_COMMANDS: 'true'
+
+    - name: "Nuget Restore"
+      uses: nuget/setup-nuget@v1
+      with:
+        nuget-version: '5.x'
+      run: nuget restore $env:Solution_Name
 
     # Restore the application to populate the obj folder with RuntimeIdentifiers
     - name: Restore the application
