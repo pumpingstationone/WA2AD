@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Net.Http;
-using Newtonsoft.Json.Linq;
-using System.Diagnostics;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace WildApricotAPI
 {
@@ -27,8 +26,21 @@ namespace WildApricotAPI
             MessageLevel = level;
         }
 
+        public WAEventArgs(Level level, string message, IDictionary<string, string> eventParameters)
+        {
+            Message = message;
+            MessageLevel = level;
+            EventParameters = eventParameters;
+        }
+
         public string Message { get; set; }
         public Level MessageLevel { get; set; }
+
+        /// <summary>
+        /// Optional properties for events to enrich 
+        /// telemetry sent to listeners
+        /// </summary>
+        public IDictionary<string, string> EventParameters { get; set; } = new Dictionary<string, string>();
     }
 
     public class WAData
@@ -61,6 +73,11 @@ namespace WildApricotAPI
             OnRaiseCustomEvent(new WAEventArgs(level, message));
         }
 
+        private void Log(WAEventArgs.Level level, string message, IDictionary<string,string> eventParameters)
+        {
+            OnRaiseCustomEvent(new WAEventArgs(level, message, eventParameters));
+        }
+
         private static string Base64Encode(string plainText)
         {
             var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
@@ -90,14 +107,31 @@ namespace WildApricotAPI
 
         private bool PutWAData(string putURL, string jsonPayload)
         {
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, putURL);
-            request.Headers.Add("Authorization", "Bearer " + this.oauthToken);            
-            request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            Log(WAEventArgs.Level.Informational, "Entering PutWAData");
+            try
+            {
+                // we are not logging the payload because it might
+                // contain a secret in it
+                Log(WAEventArgs.Level.Informational, String.Format("PutWAData URL is '{0}'", putURL));
 
-            JObject response = SendRequest(request).Result;
-            Console.WriteLine(response);
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Put, putURL);
+                request.Headers.Add("Authorization", "Bearer " + this.oauthToken);
+                request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
 
-            return true;
+                Log(WAEventArgs.Level.Informational, "Sending request");
+
+                JObject response = SendRequest(request).Result;
+
+                Log(WAEventArgs.Level.Informational, "Request sent");
+                //Console.WriteLine(response);
+
+                //TODO: This is not accomplishing anything
+                return true;
+            }
+            finally
+            {
+                Log(WAEventArgs.Level.Informational, "Exiting PutWAData");
+            }
         }
 
         private JObject GetWAData(string waResponseURL)
@@ -124,19 +158,31 @@ namespace WildApricotAPI
 
         private void GetOauthToken()
         {
-            string authString = "Basic " + Base64Encode("APIKEY:" + apiToken);
+            try
+            {
+                Log(WAEventArgs.Level.Informational, "Entering GetOAuthToken");
 
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "https://oauth.wildapricot.org/auth/token");
-            request.Content = new StringContent("grant_type=client_credentials&scope=auto",
-                                    Encoding.UTF8,
-                                    "application/x-www-form-urlencoded");
+                string authString = "Basic " + Base64Encode("APIKEY:" + apiToken);
 
-            request.Headers.Add("Authorization", authString);
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, "https://oauth.wildapricot.org/auth/token");
+                request.Content = new StringContent("grant_type=client_credentials&scope=auto",
+                                        Encoding.UTF8,
+                                        "application/x-www-form-urlencoded");
 
-            JObject dataObj = SendRequest(request).Result;
+                request.Headers.Add("Authorization", authString);
 
-            this.oauthToken = dataObj.GetValue("access_token").ToString();
-            this.accountId = (string)dataObj.SelectToken("Permissions[0].AccountId");
+                JObject dataObj = SendRequest(request).Result;
+
+                this.oauthToken = dataObj.GetValue("access_token").ToString();
+                Log(WAEventArgs.Level.Informational, "Received access_token value");
+
+                this.accountId = (string)dataObj.SelectToken("Permissions[0].AccountId");
+                Log(WAEventArgs.Level.Informational, String.Format("Found AccountID {0} in reply", this.accountId));
+            }
+            finally
+            {
+                Log(WAEventArgs.Level.Informational, "Exiting GetOAuthToken");
+            }
         }
 
         public JObject GetAllMemberData()
@@ -178,7 +224,9 @@ namespace WildApricotAPI
 
         public JObject GetMemberForWAID(string memberID)
         {
-            Log(WAEventArgs.Level.Informational, "Starting to get member data from Wild Apricot for id " + memberID + "...");
+            Dictionary<string, string> traceParameters = new Dictionary<string, string>() { { "MemberID", memberID } };
+
+            Log(WAEventArgs.Level.Informational, "Starting to get member data from Wild Apricot for id " + memberID + "...", traceParameters);
 
             GetOauthToken();
 
@@ -198,38 +246,68 @@ namespace WildApricotAPI
             System.Threading.Thread.Sleep(5000);
             JObject memberData = GetWAData(resultsURL);
 
-            Log(WAEventArgs.Level.Informational, "Finished getting the data from Wild Apricot...");
+            Log(WAEventArgs.Level.Informational, "Finished getting the data from Wild Apricot...", traceParameters);
             
             if (memberData.HasValues)
             {
-                Log(WAEventArgs.Level.Informational, "...and we have data to work with.");
+                Log(WAEventArgs.Level.Informational, "...and we have data to work with.", traceParameters);
                 return memberData;
             }
                 
-            Log(WAEventArgs.Level.Error, "...hmm, we don't have any data to work with!");                
+            Log(WAEventArgs.Level.Error, "...hmm, we don't have any data to work with!", traceParameters);                
             return null;
         }
 
         public bool SaveMember(Member member)
         {
-            // Now save it back to Wild Apricot
-            string memberJson = JsonConvert.SerializeObject(member);
+            Dictionary<string, string> traceParameters = new Dictionary<string, string>() { { "MemberID", member.Id.ToString() } };
 
-            // And now we need to set up our put request to update WA with 
-            // the new member data
-            string putURL = "https://api.wildapricot.org/v2/Accounts/" + this.accountId + "/Contacts/" + member.Id;
+            Log(WAEventArgs.Level.Informational, "Entering SaveMember", traceParameters);
 
-            // And save it to Wild Apricot...
-            return PutWAData(putURL, memberJson);
+            try
+            {
+                // Now save it back to Wild Apricot
+                string memberJson = JsonConvert.SerializeObject(member);
+
+                // And now we need to set up our put request to update WA with 
+                // the new member data
+                string putURL = "https://api.wildapricot.org/v2/Accounts/" + this.accountId + "/Contacts/" + member.Id;
+
+                Log(WAEventArgs.Level.Informational, "Sending data to WA", traceParameters);
+                // And save it to Wild Apricot...
+                return PutWAData(putURL, memberJson);
+            }
+            finally
+            {
+                Log(WAEventArgs.Level.Informational, "Exiting SaveMember", traceParameters);
+            }
         }
 
         public bool ResetPassword(string waID, string newPassword)
         {
-            // Get and transform the data into our member object
-            Member memberData = (Member)GetMemberForWAID(waID).GetValue("Contacts")[0].ToObject<Member>();
-            memberData.Password = newPassword;
+            Dictionary<string, string> traceParameters = new Dictionary<string, string>() { { "MemberID", waID } };
 
-            return SaveMember(memberData);
+            Log(WAEventArgs.Level.Informational, "Entering ResetPassword", traceParameters);
+
+            try
+            {
+                Log(WAEventArgs.Level.Informational, "Calling GetMember", traceParameters);
+                // Get and transform the data into our member object
+                Member memberData = (Member)GetMemberForWAID(waID).GetValue("Contacts")[0].ToObject<Member>();
+                memberData.Password = newPassword;
+
+                Log(WAEventArgs.Level.Informational, "Calling SaveMember", traceParameters);
+
+                bool result = SaveMember(memberData);
+
+                Log(WAEventArgs.Level.Informational, String.Format("SaveMember returned {0}", result), traceParameters);
+
+                return result;
+            }
+            finally
+            {
+                Log(WAEventArgs.Level.Informational, "Exiting ResetPassword", traceParameters);
+            }
         }
 
         public WAData(string apiToken)
