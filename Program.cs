@@ -72,8 +72,8 @@ namespace WA2AD
                         Member member = (Member)obj.ToObject<Member>();
 
                         // Our guinea pig for everything...
-                        if (member.FirstName != "Testy" || member.LastName != "McTestface")                  
-                            continue;
+                        //if (member.FirstName != "Testy" || member.LastName != "McTestface")                  
+                        //    continue;
 
                         // Now we're going to throw each member over to a task to process
                         // asynchronously
