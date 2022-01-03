@@ -2,7 +2,10 @@
 using Microsoft.ApplicationInsights.Extensibility;
 using System;
 using System.Diagnostics;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using WildApricotAPI;
+
 
 namespace WA2AD
 {
@@ -15,6 +18,21 @@ namespace WA2AD
         private TelemetryClient aiTelemetryClient = new TelemetryClient(TelemetryConfiguration.Active);
 
         private void HandleLogEvent(object sender, WAEventArgs e) { Log.Write((Log.Level)e.MessageLevel, e.Message); }
+
+        // This method is called via a Task object in Program() below
+        private void processMember(Member member)
+        {
+            try
+            {
+                Log.Write(Log.Level.Informational, "Going to work with " + member.FirstName + " " + member.LastName);
+                adActions.HandleMember(member);
+            }
+            catch (Exception me)
+            {
+                Log.Write(Log.Level.Error, string.Format("Hmm, An error occurred when working with {0}: '{1}'", member.FirstName, me));
+                aiTelemetryClient.TrackException(me);
+            }
+        }
 
         public Program()
         {
@@ -47,25 +65,26 @@ namespace WA2AD
                 {
                     var memberData = waData.GetAllMemberData();
 
-                    foreach(var obj in memberData.GetValue("Contacts"))
+                    List<Task> TaskList = new List<Task>();
+
+                    foreach (var obj in memberData.GetValue("Contacts"))
                     {
                         Member member = (Member)obj.ToObject<Member>();
 
                         // Our guinea pig for everything...
-                        //if (member.FirstName != "Testy" || member.LastName != "McTestface")                  
-                        //    continue;
+                        if (member.FirstName != "Testy" || member.LastName != "McTestface")                  
+                            continue;
 
-                        try
-                        {
-                            Log.Write(Log.Level.Informational, "Going to work with " + member.FirstName + " " + member.LastName);
-                            adActions.HandleMember(member);
-                        }
-                        catch(Exception me)
-                        {
-                            Log.Write(Log.Level.Error, string.Format("Hmm, An error occurred when working with {0}: '{1}'", member.FirstName, me));
-                            aiTelemetryClient.TrackException(me);
-                        }
+                        // Now we're going to throw each member over to a task to process
+                        // asynchronously
+                        var processMemberTask = new Task(() => processMember(member));
+                        processMemberTask.Start();
+                        TaskList.Add(processMemberTask);
                     }
+
+                    // Now we're gonna wait for everyone to finish processing...
+                    Task.WaitAll(TaskList.ToArray());
+                    Log.Write(Log.Level.Informational, "Our member task list is now empty");
                 }
                 catch(Exception e)
                 {
