@@ -317,16 +317,43 @@ namespace WA2AD
             // we put the user in the appropriate OU based on that
             bool isCurrentlyEnabled = (bool)userPrincipal.Enabled;
             bool shouldBeEnabled = member.Status == "Lapsed" ? false : true;
-            
+            Console.WriteLine(member.FirstName + " " + member.LastName + " is currenty set to " + (shouldBeEnabled ? "ENABLED" : "DISABLED"));
+
             // We also need to check three other things, whether they've signed
             // the extra essentials waiver, whether they've completed orientation,
             // and whether they're disabled via the master "disabled" switch
             var efc = getValueForKey(member, "Essentials Form Completed");
             var oc = getValueForKey(member, "Orientation Completed");
-            var mks = getValueForKey(member, "Disabled");
-           
+            /*
+            if (efc.Value == null || oc.Value == null)
+            {
+                Log.Write(Log.Level.Warning, "(forms) We are explicitly disabling " + member.FirstName + " " + member.LastName);
+                shouldBeEnabled = false;
+            }
+            */
+
+            // 1/13/22 - If the vaxx field isn't set, or is set to "Not Validated" we disable the member
+            var vaxx = getValueForKey(member, "2022 Covid Vaccine Policy Compliance");
+            if (vaxx.Value == null)
+            {
+                Log.Write(Log.Level.Warning, "(vaxx) We are explicitly disabling " + member.FirstName + " " + member.LastName);
+                shouldBeEnabled = false;
+            }
+            else 
+            {
+                JObject mksVal = JObject.Parse(vaxx.Value.ToString());
+
+                var isValidated = (string)mksVal.GetValue("Label");
+                if (isValidated == "Not Validated")                
+                {
+                    Log.Write(Log.Level.Warning, "(vaxx) We are explicitly disabling " + member.FirstName + " " + member.LastName);
+                    shouldBeEnabled = false;
+                }
+            }
+
             // The member is disabled if the field is not null and explicitly
             // set to Yes
+            var mks = getValueForKey(member, "Disabled");
             var mustDisable = false;
             if (mks.Value != null)
             {
@@ -338,13 +365,14 @@ namespace WA2AD
                     mustDisable = true;
                 }
             }
-            /*
-            if (efc.Value == null || oc.Value == null || mustDisable == true)
+
+            // If the user has been explicitly disabled in WA, they're disabled, no
+            // matter what
+            if (mustDisable == true)
             {
-                Console.WriteLine("We are explicitly disabling " + member.FirstName + " " + member.LastName);
+                Log.Write(Log.Level.Warning, "(must disable) We are explicitly disabling " + member.FirstName + " " + member.LastName);
                 shouldBeEnabled = false;
             }
-            */
 
             // Last check of membership status
             if (member.MembershipEnabled == false)

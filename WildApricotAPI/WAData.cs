@@ -209,8 +209,8 @@ namespace WildApricotAPI
             JObject memberData = GetWAData(resultsURL);
 
             Log(WAEventArgs.Level.Informational, "Finished getting the data from Wild Apricot...");
-            
-            if (memberData.HasValues)
+             
+            if (memberData != null && memberData.HasValues)
             {
                 Log(WAEventArgs.Level.Informational, "...and we have data to work with.");
                 
