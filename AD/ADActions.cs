@@ -331,7 +331,7 @@ namespace WA2AD
                 shouldBeEnabled = false;
             }
             */
-            /*
+            
             // 1/13/22 - If the vaxx field isn't set, or is set to "Not Validated" we disable the member
             var vaxx = getValueForKey(member, "2022 Covid Vaccine Policy Compliance");
             if (vaxx.Value == null)
@@ -350,8 +350,7 @@ namespace WA2AD
                     shouldBeEnabled = false;
                 }
             }
-            */
-
+           
             // The member is disabled if the field is not null and explicitly
             // set to Yes
             var mks = getValueForKey(member, "Disabled");
