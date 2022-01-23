@@ -222,11 +222,11 @@ namespace WA2AD
             try
             {
                 userPrincipal.Save();
-                Log.Write(Log.Level.Informational, "Created a new user for " + member.FirstName + " " + member.LastName);
+                Log.Write(Log.Level.Informational, "Created a new user for " + member.FirstName + " " + member.LastName + " AD username: " + (string)member.FieldValues[FieldValue.ADUSERNAME].Value);
             }
             catch (Exception e)
             {
-                Log.Write(Log.Level.Error, "Exception creating user object for " + member.FirstName + " " + member.LastName + " -> " + e);
+                Log.Write(Log.Level.Error, "Exception creating user object for " + member.FirstName + " " + member.LastName + " with AD username " + (string)member.FieldValues[FieldValue.ADUSERNAME].Value + " -> " + e);
             }
         }
 
@@ -294,7 +294,7 @@ namespace WA2AD
             // Now, having wiped out the previous value, let's see if there
             // are any tags
             FieldValue rfidTagFV = getValueForKey(member, "RFID Tag");
-            if (rfidTagFV != null && rfidTagFV.ToString().Length > 0)
+            if (rfidTagFV != null && rfidTagFV.Value != null && rfidTagFV.ToString().Length > 0)
             {
                 // Split on a comma
                 string[] tokens = ((string)rfidTagFV.Value).Split(',');
@@ -331,7 +331,7 @@ namespace WA2AD
                 shouldBeEnabled = false;
             }
             */
-
+            /*
             // 1/13/22 - If the vaxx field isn't set, or is set to "Not Validated" we disable the member
             var vaxx = getValueForKey(member, "2022 Covid Vaccine Policy Compliance");
             if (vaxx.Value == null)
@@ -350,6 +350,7 @@ namespace WA2AD
                     shouldBeEnabled = false;
                 }
             }
+            */
 
             // The member is disabled if the field is not null and explicitly
             // set to Yes
@@ -527,7 +528,7 @@ namespace WA2AD
 
                 if (FindExistingUser(ref newU) == false)
                 {
-                    Log.Write(Log.Level.Error, string.Format("Hmm, we just created the user {0} in AD, but couldn't find it", (string)member.FieldValues[FieldValue.ADUSERNAME].Value));
+                    Log.Write(Log.Level.Error, string.Format("Hmm, for {0} {1} we just created the username {2} in AD, but couldn't find it", member.FirstName, member.LastName, (string)member.FieldValues[FieldValue.ADUSERNAME].Value));
                                        
                     // And we're not gonna continue
                     return;

@@ -24,7 +24,7 @@ namespace WA2AD
         {
             try
             {
-                Log.Write(Log.Level.Informational, "Going to work with " + member.FirstName + " " + member.LastName);
+                Log.Write(Log.Level.Informational, "\t\t*** Going to work with " + member.FirstName + " " + member.LastName + " - member ID: " + member.Id + " ***");
                 adActions.HandleMember(member);
             }
             catch (Exception me)
@@ -64,6 +64,11 @@ namespace WA2AD
                 try
                 {
                     var memberData = waData.GetAllMemberData();
+                    if (memberData == null)
+                    {
+                        Log.Write(Log.Level.Error, "No data to work with so not continuing");
+                        return;
+                    }
 
                     List<Task> TaskList = new List<Task>();
 

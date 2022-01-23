@@ -202,21 +202,26 @@ namespace WildApricotAPI
 
             GetOauthToken();
 
-            string resultsURL = GetMemberListUrl();
-            Log(WAEventArgs.Level.Informational, "Our results URL is " + resultsURL);
-
-            System.Threading.Thread.Sleep(5000);
-            JObject memberData = GetWAData(resultsURL);
-
-            Log(WAEventArgs.Level.Informational, "Finished getting the data from Wild Apricot...");
-             
-            if (memberData != null && memberData.HasValues)
+            for (int x = 0; x < 5; ++x)
             {
-                Log(WAEventArgs.Level.Informational, "...and we have data to work with.");
-                
-                return memberData;
+                Log(WAEventArgs.Level.Informational, "On try " + (x+1) + " to get the WA data...");
+
+                string resultsURL = GetMemberListUrl();
+                Log(WAEventArgs.Level.Informational, "Our results URL is " + resultsURL);
+
+                System.Threading.Thread.Sleep(5000);
+                JObject memberData = GetWAData(resultsURL);
+
+                Log(WAEventArgs.Level.Informational, "Finished getting the data from Wild Apricot...");
+
+                if (memberData != null && memberData.HasValues)
+                {
+                    Log(WAEventArgs.Level.Informational, "...and we have data to work with.");
+
+                    return memberData;
+                }
             }
-            
+
             Log(WAEventArgs.Level.Warning, "...hmm, we don't have any data to work with!");
             
             return null;
