@@ -173,7 +173,7 @@ namespace WA2AD
                 userPrincipal.EmailAddress = member.Email;
             else
             { 
-                Log.Write(Log.Level.Warning, "No email set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
+                Log.Write(Log.Level.Warning, "(mid:"+member.Id+") No email set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
                 return;
             }
 
@@ -183,7 +183,7 @@ namespace WA2AD
                 userPrincipal.SamAccountName = userLogonName.Length > 20 ? userLogonName.Substring(0, 20) : userLogonName;
             else
             {
-                Log.Write(Log.Level.Warning, "No username set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
+                Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") No username set for " + member.FirstName + " " + member.LastName + ", so can't continue.");
                 return;
             }
 
@@ -222,11 +222,11 @@ namespace WA2AD
             try
             {
                 userPrincipal.Save();
-                Log.Write(Log.Level.Informational, "Created a new user for " + member.FirstName + " " + member.LastName + " AD username: " + (string)member.FieldValues[FieldValue.ADUSERNAME].Value);
+                Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") Created a new user for " + member.FirstName + " " + member.LastName + " AD username: " + (string)member.FieldValues[FieldValue.ADUSERNAME].Value);
             }
             catch (Exception e)
             {
-                Log.Write(Log.Level.Error, "Exception creating user object for " + member.FirstName + " " + member.LastName + " with AD username " + (string)member.FieldValues[FieldValue.ADUSERNAME].Value + " -> " + e);
+                Log.Write(Log.Level.Error, "(mid:" + member.Id + ") Exception creating user object for " + member.FirstName + " " + member.LastName + " with AD username " + (string)member.FieldValues[FieldValue.ADUSERNAME].Value + " -> " + e);
             }
         }
 
@@ -317,7 +317,7 @@ namespace WA2AD
             // we put the user in the appropriate OU based on that
             bool isCurrentlyEnabled = (bool)userPrincipal.Enabled;
             bool shouldBeEnabled = member.Status == "Lapsed" ? false : true;
-            Console.WriteLine(member.FirstName + " " + member.LastName + " is currenty set to " + (shouldBeEnabled ? "ENABLED" : "DISABLED"));
+            Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") " + member.FirstName + " " + member.LastName + " is currenty set to " + (shouldBeEnabled ? "ENABLED" : "DISABLED"));
 
             // We also need to check three other things, whether they've signed
             // the extra essentials waiver, whether they've completed orientation,
@@ -327,17 +327,22 @@ namespace WA2AD
             /*
             if (efc.Value == null || oc.Value == null)
             {
-                Log.Write(Log.Level.Warning, "(forms) We are explicitly disabling " + member.FirstName + " " + member.LastName);
+                Log.Write(Log.Level.Warning, "(mid:"+member.Id+") (forms) We are explicitly disabling " + member.FirstName + " " + member.LastName);
                 shouldBeEnabled = false;
             }
             */
-            
-            // 1/13/22 - If the vaxx field isn't set, or is set to "Not Validated" we disable the member
+
+            // 1/13/22 - If the vaxx field isn't set, or is set to "Not Validated" we disable the member,
+            // but so they still have access to online stuff, we use the reEnableForOnlineAccess flag
+            // to make sure they can still log into things like Canvas, etc.
+            bool reEnableForOnlineAccess = false;
             var vaxx = getValueForKey(member, "2022 Covid Vaccine Policy Compliance");
             if (vaxx.Value == null)
             {
-                Log.Write(Log.Level.Warning, "(vaxx) We are explicitly disabling " + member.FirstName + " " + member.LastName);
+                Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") (vaxx) We are explicitly disabling " + member.FirstName + " " + member.LastName);
                 shouldBeEnabled = false;
+                // ...but allow them to have access to online stuff...
+                reEnableForOnlineAccess = true;
             }
             else 
             {
@@ -346,8 +351,10 @@ namespace WA2AD
                 var isValidated = (string)mksVal.GetValue("Label");
                 if (isValidated == "Not Validated")                
                 {
-                    Log.Write(Log.Level.Warning, "(vaxx) We are explicitly disabling " + member.FirstName + " " + member.LastName);
+                    Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") (vaxx) We are explicitly disabling " + member.FirstName + " " + member.LastName);
                     shouldBeEnabled = false;
+                    // ...but allow them to have access to online stuff...
+                    reEnableForOnlineAccess = true;
                 }
             }
            
@@ -370,19 +377,27 @@ namespace WA2AD
             // matter what
             if (mustDisable == true)
             {
-                Log.Write(Log.Level.Warning, "(must disable) We are explicitly disabling " + member.FirstName + " " + member.LastName);
+                Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") (must disable) We are explicitly disabling " + member.FirstName + " " + member.LastName);
                 shouldBeEnabled = false;
+                // If we really must disable the user, then we will make sure that
+                // we don't also enable online stuff
+                reEnableForOnlineAccess = false;
             }
 
             // Last check of membership status
             if (member.MembershipEnabled == false)
             {
+                Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") " + member.FirstName + " " + member.LastName + "'s membership is *NOT* enabled in WA, so we're completing disabling them.");
+
                 shouldBeEnabled = false;
+                // And since they're really disabled, we will not enable
+                // online access
+                reEnableForOnlineAccess = false;
             }
 
             if (isCurrentlyEnabled != shouldBeEnabled)
             {
-                Log.Write(Log.Level.Warning, "Going to set " + member.FirstName + " " + member.LastName + "'s status to " + (shouldBeEnabled ? "enabled" : "disabled"));
+                Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") Going to set " + member.FirstName + " " + member.LastName + "'s status to " + (shouldBeEnabled ? "enabled" : "disabled"));
                 userPrincipal.Enabled = shouldBeEnabled;
                 userPrincipal.Save();
                 // And put the person in the right OU
@@ -394,11 +409,19 @@ namespace WA2AD
             try
             {
                 userPrincipal.Save();
-                Log.Write(Log.Level.Informational, "Updated user " + member.FirstName + " " + member.LastName);
+                Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") Updated user " + member.FirstName + " " + member.LastName);
             }
             catch (Exception e)
             {
-                Log.Write(Log.Level.Error, "Exception when updating user object. " + e);
+                Log.Write(Log.Level.Error, "(mid:" + member.Id + ") Exception when updating user object. " + e);
+            }
+
+            // If we disabled the user in AD for vaxx reasons, we return *true* here
+            // so they still have access to online resources
+            if (reEnableForOnlineAccess)
+            {
+                Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") (vaxx) Online access allowed for " + member.FirstName + " " + member.LastName);
+                return true;
             }
 
             return shouldBeEnabled;
@@ -491,14 +514,14 @@ namespace WA2AD
             // Is this a real member, or just a contact?
             if (member.MembershipLevel == null)
             {
-                Log.Write(Log.Level.Warning, "This person is not a member!");
+                Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") This person is not a member!");
                 return;
             }
 
             // But do nothing if the membership is still pending
             if (member.Status == "PendingNew")
             {
-                Log.Write(Log.Level.Warning, "Ah, but membership is still pending, so not going to add");
+                Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") Ah, but membership is still pending, so not going to add");
                 return;
             }
 
@@ -509,14 +532,14 @@ namespace WA2AD
 
             if (FindExistingUser(ref u)) 
             {
-                Log.Write(Log.Level.Informational, "Oh, hey, found " + member.FirstName + " in AD");
+                Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") Oh, hey, found " + member.FirstName + " in AD");
                 bool isMemberEnabled = UpdateUser(member, ref u);
 
                 this.b2cActions.UpdateUser(isMemberEnabled, member, u);
             }
             else
             {
-                Log.Write(Log.Level.Informational, "Didn't find " + member.FirstName + " in AD, so must be new...");
+                Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") Didn't find " + member.FirstName + " in AD, so must be new...");
                 CreateUser(member);
 
                 // Now we need to get the AD object so we can update B2C with it
@@ -527,7 +550,7 @@ namespace WA2AD
 
                 if (FindExistingUser(ref newU) == false)
                 {
-                    Log.Write(Log.Level.Error, string.Format("Hmm, for {0} {1} we just created the username {2} in AD, but couldn't find it", member.FirstName, member.LastName, (string)member.FieldValues[FieldValue.ADUSERNAME].Value));
+                    Log.Write(Log.Level.Error, "(mid:" + member.Id + ") " + string.Format("Hmm, for {0} {1} we just created the username {2} in AD, but couldn't find it", member.FirstName, member.LastName, (string)member.FieldValues[FieldValue.ADUSERNAME].Value));
                                        
                     // And we're not gonna continue
                     return;

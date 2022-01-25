@@ -24,12 +24,12 @@ namespace WA2AD
         {
             try
             {
-                Log.Write(Log.Level.Informational, "\t\t*** Going to work with " + member.FirstName + " " + member.LastName + " - member ID: " + member.Id + " ***");
+                Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") " + "\t\t*** Going to work with " + member.FirstName + " " + member.LastName + " - member ID: " + member.Id + " ***");
                 adActions.HandleMember(member);
             }
             catch (Exception me)
             {
-                Log.Write(Log.Level.Error, string.Format("Hmm, An error occurred when working with {0}: '{1}'", member.FirstName, me));
+                Log.Write(Log.Level.Error, "(mid:" + member.Id + ") " + string.Format("Hmm, An error occurred when working with {0}: '{1}'", member.FirstName, me));
                 aiTelemetryClient.TrackException(me);
             }
         }
@@ -71,7 +71,7 @@ namespace WA2AD
                     }
 
                     List<Task> TaskList = new List<Task>();
-
+                    int memberCount = 0;
                     foreach (var obj in memberData.GetValue("Contacts"))
                     {
                         Member member = (Member)obj.ToObject<Member>();
@@ -80,16 +80,24 @@ namespace WA2AD
                         //if (member.FirstName != "Testy" || member.LastName != "McTestface")                  
                         //    continue;
 
+                        processMember(member);
+                        /*
                         // Now we're going to throw each member over to a task to process
                         // asynchronously
                         var processMemberTask = new Task(() => processMember(member));
                         processMemberTask.Start();
                         TaskList.Add(processMemberTask);
+                        */
+                        ++memberCount;
                     }
 
+                    Log.Write(Log.Level.Informational, String.Format("Processed {0} people", memberCount));
+
+                    /*
                     // Now we're gonna wait for everyone to finish processing...
                     Task.WaitAll(TaskList.ToArray());
                     Log.Write(Log.Level.Informational, "Our member task list is now empty");
+                    */
                 }
                 catch(Exception e)
                 {

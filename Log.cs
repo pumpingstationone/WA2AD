@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
+using System.IO;
 
 namespace WA2AD
 {
@@ -31,6 +33,9 @@ namespace WA2AD
             Warning,
             Error
         }
+
+        private static string logFilename = "wa2ad.log";
+        private static Object logFileLock = new Object();
 
         private static readonly Lazy<Log> log = new Lazy<Log>(() => new Log());
 
@@ -68,11 +73,19 @@ namespace WA2AD
             }
 
             Console.ResetColor();
+
+            lock (logFileLock)
+            {
+                // And let's write to a file
+                using (StreamWriter sw = File.AppendText(logFilename))
+                {
+                    sw.WriteLine(logLine);
+                }
+            }
         }
 
         private Log()
         {
-
         }
     }
 }

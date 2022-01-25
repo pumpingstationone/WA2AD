@@ -122,10 +122,10 @@ namespace WA2AD
             }
             catch (Exception ex)
             {
-                Log.Write(Log.Level.Error, string.Format("Drat, got {0} when trying to create the B2C user for {1}", ex.Message, u.Name));
+                Log.Write(Log.Level.Error, "(mid:" + waID + ") " + string.Format("Drat, got {0} when trying to create the B2C user for {1}", ex.Message, u.Name));
             }
 
-            Log.Write(Log.Level.Informational, string.Format("Created the user {0} in B2C", u.Name));
+            Log.Write(Log.Level.Informational, "(mid:" + waID + ") " + string.Format("Created the user {0} in B2C", u.Name));
         }
 
         async Task<User> FindUserByADGuid(string userADGuid)
@@ -144,7 +144,9 @@ namespace WA2AD
 
                 if (result != null)
                 {
-                   // Yay, we found the user
+                    // Yay, we found the user
+                    Log.Write(Log.Level.Informational, string.Format("We found {0}", userADGuid));
+
                     return result[0];
                 }
             }
@@ -194,13 +196,13 @@ namespace WA2AD
                    .Request()
                    .UpdateAsync(user);
 
-                Log.Write(Log.Level.Informational, $"User with object ID '{user.Id}' successfully updated.");
+                Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") " + "User with object ID " + user.Id + " successfully updated.");
 
                 return true;
             }
             catch (Exception ex)
             {               
-                Log.Write(Log.Level.Error, string.Format("Drat, got {0} when trying to really update the B2C user for {1}", ex.Message, u.Name));
+                Log.Write(Log.Level.Error, "(mid:" + member.Id + ") " + string.Format("Drat, got {0} when trying to really update the B2C user for {1}", ex.Message, u.Name));
             }
 
             return false;
@@ -210,6 +212,7 @@ namespace WA2AD
         {
             // This method checks to see if the user exists in B2C and if not, adds the user,
             // otherwise updates
+            bool noErrors = true;
             try
             {
                 Task<User> findUserTask = FindUserByADGuid(u.Guid.ToString());
@@ -219,7 +222,7 @@ namespace WA2AD
                     // User isn't in B2C, so we add it now if the member is enabled
                     if (isMemberEnabled == true)
                     {                        
-                        Log.Write(Log.Level.Informational, string.Format("{0} is not in B2C, so we're going to add it now", u.Name));                        
+                        Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") " + string.Format("{0} is not in B2C, so we're going to add it now", u.Name));                        
                         AddNewUser(u, member.Id);
                     }
                 }
@@ -227,7 +230,7 @@ namespace WA2AD
                 {
                     // Oh, hey, we found the user, so we'll see if we
                     // need to do any updates                    
-                    Log.Write(Log.Level.Informational, string.Format("{0} is in B2C, so we're going to do any updates", u.Name));                    
+                    Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") " + string.Format("{0} is in B2C, so we're going to do any updates", u.Name));                    
 
                     Task<bool> updateTask = ReallyUpdateUser(isMemberEnabled, member, u, existingUser);
                     bool okay = updateTask.Result;
@@ -235,10 +238,18 @@ namespace WA2AD
             }
             catch (Exception ex)
             {
-                Log.Write(Log.Level.Error, string.Format("Drat, got {0} when trying to update the B2C user for {1}", ex.Message, u.Name));
+                Log.Write(Log.Level.Error, "(mid:" + member.Id + ") " + string.Format("Drat, got {0} when trying to update the B2C user for {1}", ex.Message, u.Name));
+                noErrors = false;
             }
 
-            Log.Write(Log.Level.Informational, string.Format("Updated the user {0} in B2C", u.Name));
+            if (noErrors)
+            {
+                Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") " + string.Format("Updated the user {0} in B2C", u.Name));
+            }
+            else
+            {
+                Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") " + string.Format("Hey! Check the user {0} in B2C", u.Name));
+            }
         }
 
         public B2CActions()
