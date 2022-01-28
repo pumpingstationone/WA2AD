@@ -36,6 +36,7 @@ namespace WA2AD
 
         private static string logFilename = "wa2ad.log";
         private static Object logFileLock = new Object();
+        private static bool logToFile = false;
 
         private static readonly Lazy<Log> log = new Lazy<Log>(() => new Log());
 
@@ -74,13 +75,29 @@ namespace WA2AD
 
             Console.ResetColor();
 
-            lock (logFileLock)
-            {
-                // And let's write to a file
-                using (StreamWriter sw = File.AppendText(logFilename))
+            if (logToFile)
+            { 
+                lock (logFileLock)
                 {
-                    sw.WriteLine(logLine);
+                    // And let's write to a file
+                    using (StreamWriter sw = File.AppendText(logFilename))
+                    {
+                        sw.WriteLine(logLine);
+                    }
                 }
+            }
+        }
+
+        static Log()
+        {
+            var MyIni = new IniFile();
+            string logToFileFlag = MyIni.Read("EnableFileLogging").Trim();
+            if (logToFileFlag == "1")
+            {
+                Console.Write("Truncating old log file...");
+                FileStream oStream = new FileStream(logFilename, FileMode.Open, FileAccess.ReadWrite);
+                oStream.SetLength(0);
+                logToFile = true;
             }
         }
 
