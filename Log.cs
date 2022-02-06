@@ -95,7 +95,7 @@ namespace WA2AD
             if (logToFileFlag == "1")
             {
                 Console.Write("Truncating old log file...");
-                FileStream oStream = new FileStream(logFilename, FileMode.Open, FileAccess.ReadWrite);
+                FileStream oStream = new FileStream(logFilename, FileMode.OpenOrCreate, FileAccess.ReadWrite);
                 oStream.SetLength(0);
                 logToFile = true;
             }
