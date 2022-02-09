@@ -387,7 +387,7 @@ namespace WA2AD
             // Last check of membership status
             if (member.MembershipEnabled == false)
             {
-                Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") " + member.FirstName + " " + member.LastName + "'s membership is *NOT* enabled in WA, so we're completing disabling them.");
+                Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") " + member.FirstName + " " + member.LastName + "'s membership is *NOT* enabled in WA, so we're completely disabling them.");
 
                 shouldBeEnabled = false;
                 // And since they're really disabled, we will not enable
