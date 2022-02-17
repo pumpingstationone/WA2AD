@@ -94,7 +94,7 @@ namespace WA2AD
             string logToFileFlag = MyIni.Read("EnableFileLogging").Trim();
             if (logToFileFlag == "1")
             {
-                Console.Write("=== Okay, let's truncating old log file...");
+                Console.Write("=== Okay, let's truncate the old log file...");
                 FileStream oStream = File.Open(logFilename, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite);
                 oStream.SetLength(0);
                 oStream.Close();
