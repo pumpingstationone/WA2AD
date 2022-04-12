@@ -335,6 +335,9 @@ namespace WA2AD
             // 1/13/22 - If the vaxx field isn't set, or is set to "Not Validated" we disable the member,
             // but so they still have access to online stuff, we use the reEnableForOnlineAccess flag
             // to make sure they can still log into things like Canvas, etc.
+
+            // 04/11/22 - nobody is setting this field anymore
+            /*
             bool reEnableForOnlineAccess = false;
             var vaxx = getValueForKey(member, "2022 Covid Vaccine Policy Compliance");
             if (vaxx.Value == null)
@@ -357,7 +360,10 @@ namespace WA2AD
                     reEnableForOnlineAccess = true;
                 }
             }
-           
+            */
+            // Because the section above is commented out, let this always be true
+            bool reEnableForOnlineAccess = true;
+
             // The member is disabled if the field is not null and explicitly
             // set to Yes
             var mks = getValueForKey(member, "Disabled");
