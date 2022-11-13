@@ -177,7 +177,7 @@ namespace WA2AD
                 return;
             }
 
-            string userLogonName = (string)member.FieldValues[FieldValue.ADUSERNAME].Value;
+            string userLogonName = (string)getValueForKey(member, "Active Directory Username").Value;
             if (userLogonName != null && userLogonName.Length > 0)
                 // Apparently we can only use the first twenty characters for this name
                 userPrincipal.SamAccountName = userLogonName.Length > 20 ? userLogonName.Substring(0, 20) : userLogonName;
@@ -222,11 +222,11 @@ namespace WA2AD
             try
             {
                 userPrincipal.Save();
-                Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") Created a new user for " + member.FirstName + " " + member.LastName + " AD username: " + (string)member.FieldValues[FieldValue.ADUSERNAME].Value);
+                Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") Created a new user for " + member.FirstName + " " + member.LastName + " AD username: " + (string)(string)getValueForKey(member, "Active Directory Username").Value);
             }
             catch (Exception e)
             {
-                Log.Write(Log.Level.Error, "(mid:" + member.Id + ") Exception creating user object for " + member.FirstName + " " + member.LastName + " with AD username " + (string)member.FieldValues[FieldValue.ADUSERNAME].Value + " -> " + e);
+                Log.Write(Log.Level.Error, "(mid:" + member.Id + ") Exception creating user object for " + member.FirstName + " " + member.LastName + " with AD username " + (string)getValueForKey(member, "Active Directory Username").Value + " -> " + e);
             }
         }
 
@@ -533,7 +533,7 @@ namespace WA2AD
 
             UserPrincipal u = new UserPrincipal(pc)
             {
-                SamAccountName = (string)member.FieldValues[FieldValue.ADUSERNAME].Value
+                SamAccountName = (string)getValueForKey(member, "Active Directory Username").Value
             };
 
             if (FindExistingUser(ref u)) 
@@ -551,12 +551,12 @@ namespace WA2AD
                 // Now we need to get the AD object so we can update B2C with it
                 UserPrincipal newU = new UserPrincipal(pc)
                 {
-                    SamAccountName = (string)member.FieldValues[FieldValue.ADUSERNAME].Value
+                    SamAccountName = (string)getValueForKey(member, "Active Directory Username").Value
                 };
 
                 if (FindExistingUser(ref newU) == false)
                 {
-                    Log.Write(Log.Level.Error, "(mid:" + member.Id + ") " + string.Format("Hmm, for {0} {1} we just created the username {2} in AD, but couldn't find it", member.FirstName, member.LastName, (string)member.FieldValues[FieldValue.ADUSERNAME].Value));
+                    Log.Write(Log.Level.Error, "(mid:" + member.Id + ") " + string.Format("Hmm, for {0} {1} we just created the username {2} in AD, but couldn't find it", member.FirstName, member.LastName, (string)getValueForKey(member, "Active Directory Username").Value));
                                        
                     // And we're not gonna continue
                     return;
