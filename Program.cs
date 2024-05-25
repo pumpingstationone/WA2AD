@@ -63,7 +63,8 @@ namespace WA2AD
 
                 try
                 {
-                    var memberData = waData.GetAllMemberData();
+                    //var memberData = waData.GetAllMemberData();
+                    var memberData = waData.GetLatestMemberData();
                     if (memberData == null)
                     {
                         Log.Write(Log.Level.Error, "No data to work with so not continuing");

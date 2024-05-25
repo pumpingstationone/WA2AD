@@ -97,11 +97,25 @@ namespace WildApricotAPI
 
             using (var response = await client.SendAsync(message))
             {
-                System.Threading.Thread.Sleep(4000);
-                var responseString = await response.Content.ReadAsStringAsync();
-                JObject json = JObject.Parse(responseString);
+                JObject json;
 
-                return json;
+                for (int x = 0; x < 5; ++x)
+                {
+                    System.Threading.Thread.Sleep(4000);
+
+                    var responseString = await response.Content.ReadAsStringAsync();
+                    if (responseString.Length > 0)
+                    {
+                        json = JObject.Parse(responseString);
+                        return json;
+                    }
+                    else
+                    {
+                        Log(WAEventArgs.Level.Warning, "Hmm, we didn't get a successful response from WA. Trying again in 4 seconds.");
+                    }                  
+                }
+                
+                return null;
             }
         }
 
@@ -224,6 +238,54 @@ namespace WildApricotAPI
 
             Log(WAEventArgs.Level.Warning, "...hmm, we don't have any data to work with!");
             
+            return null;
+        }
+
+        public JObject GetLatestMemberData()
+        {
+            string GetMemberListUrl()
+            {
+                // We need the current date in YYYY-MM-DD format
+                string currentDate = DateTime.Now.ToString("yyyy-MM-dd");
+                
+                string requestString = "https://api.wildapricot.org/v2.2/accounts/" + this.accountId + "/contacts?%24async=true&%24filter='Profile%20Last%20Updated'%20ge%20'" + currentDate + "'";
+                Log(WAEventArgs.Level.Informational, "Request is " + requestString);
+
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, requestString);
+                request.Headers.Add("Authorization", "Bearer " + this.oauthToken);
+
+                JObject dataObj = SendRequest(request).Result;
+
+                // Now we need to get the real url
+                return dataObj.GetValue("ResultUrl").ToString();
+            }
+
+            Log(WAEventArgs.Level.Informational, "Starting to get all the member data from Wild Apricot...");
+
+            GetOauthToken();
+
+            for (int x = 0; x < 5; ++x)
+            {
+                Log(WAEventArgs.Level.Informational, "On try " + (x + 1) + " to get the WA data...");
+
+                string resultsURL = GetMemberListUrl();
+                Log(WAEventArgs.Level.Informational, "Our results URL is " + resultsURL);
+
+                System.Threading.Thread.Sleep(5000);
+                JObject memberData = GetWAData(resultsURL);
+
+                Log(WAEventArgs.Level.Informational, "Finished getting the data from Wild Apricot...");
+
+                if (memberData != null && memberData.HasValues)
+                {
+                    Log(WAEventArgs.Level.Informational, "...and we have data to work with.");
+
+                    return memberData;
+                }
+            }
+
+            Log(WAEventArgs.Level.Warning, "...hmm, we don't have any data to work with!");
+
             return null;
         }
 
