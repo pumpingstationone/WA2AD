@@ -1,11 +1,16 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30907.101
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.34916.146
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WA2AD", "WA2AD.csproj", "{B9F074E2-E901-4947-9B46-580E98AD2347}"
+	ProjectSection(ProjectDependencies) = postProject
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559} = {ED86E7DD-36FB-463A-A1C9-AE542925C559}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WildApricotAPI", "WildApricotAPI\WildApricotAPI.csproj", "{FA60AE3C-81F9-4BF7-BDEB-DCCC46DD7841}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SyncDB", "SyncDB\SyncDB.csproj", "{ED86E7DD-36FB-463A-A1C9-AE542925C559}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -61,6 +66,26 @@ Global
 		{FA60AE3C-81F9-4BF7-BDEB-DCCC46DD7841}.Release|x64.Build.0 = Release|Any CPU
 		{FA60AE3C-81F9-4BF7-BDEB-DCCC46DD7841}.Release|x86.ActiveCfg = Release|Any CPU
 		{FA60AE3C-81F9-4BF7-BDEB-DCCC46DD7841}.Release|x86.Build.0 = Release|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Debug|ARM.ActiveCfg = Debug|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Debug|ARM.Build.0 = Debug|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Debug|x64.Build.0 = Debug|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Debug|x86.Build.0 = Debug|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Release|ARM.ActiveCfg = Release|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Release|ARM.Build.0 = Release|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Release|ARM64.Build.0 = Release|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Release|x64.ActiveCfg = Release|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Release|x64.Build.0 = Release|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Release|x86.ActiveCfg = Release|Any CPU
+		{ED86E7DD-36FB-463A-A1C9-AE542925C559}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

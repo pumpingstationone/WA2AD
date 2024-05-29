@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using WildApricotAPI;
+using SyncDB;
 
 
 namespace WA2AD
@@ -14,6 +15,9 @@ namespace WA2AD
         // Our job types, which we can use as contants right now
         public const string FULL_SYNC = "full";
         public const string LATEST_SYNC = "latest";
+
+        // Our sync database to keep track of when we last synced, and who
+        private MemberDB memberDB = new MemberDB();
 
         EventLogTraceListener wa2adTraceListener = new EventLogTraceListener("WA2AD");
 
@@ -77,7 +81,11 @@ namespace WA2AD
                     else if (jobType == LATEST_SYNC)
                     {
                         // Get the latest data from WA (this is a delta sync)
-                        memberData = waData.GetLatestMemberData();
+                        // First we need to get the last time we synced from
+                        // our database
+                        string lastSync = memberDB.GetLastSyncTime();
+                        Log.Write(Log.Level.Informational, "Last sync was: " + lastSync);
+                        memberData = waData.GetLatestMemberData(lastSync);
                     }
                    
                     if (memberData == null)
@@ -97,6 +105,10 @@ namespace WA2AD
                         //    continue;
 
                         processMember(member);
+
+                        // And update the sync database with the last time we synced this person
+                        memberDB.UpdateMember(member.Id, member.FirstName, member.LastName);
+
                         /*
                         // Now we're going to throw each member over to a task to process
                         // asynchronously
@@ -114,6 +126,12 @@ namespace WA2AD
                     Task.WaitAll(TaskList.ToArray());
                     Log.Write(Log.Level.Informational, "Our member task list is now empty");
                     */
+
+                    // And update our sync database with the last time we synced. If there
+                    // was any kind of exception that didn't allow the job to succeed, then
+                    // this won't be updated to the latest time, so cool, we can try again
+                    // later from that checkpoint
+                    memberDB.UpdateSyncTime();
                 }
                 catch(Exception e)
                 {
@@ -125,6 +143,9 @@ namespace WA2AD
             {
                 Log.Write(Log.Level.Informational, "...Finished job");
             }
+
+            // And make sure we close the database
+            memberDB.Close();
         }
 
         static void Main(string[] args)

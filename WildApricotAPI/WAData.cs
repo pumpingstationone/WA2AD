@@ -59,13 +59,7 @@ namespace WildApricotAPI
        
         protected virtual void OnRaiseCustomEvent(WAEventArgs e)
         {
-            EventHandler<WAEventArgs> raiseEvent = RaiseCustomEvent;
-
-            // Event will be null if there are no subscribers
-            if (raiseEvent != null)
-            {                           
-                raiseEvent(this, e);
-            }
+            RaiseCustomEvent?.Invoke(this, e);
         }
 
         private void Log(WAEventArgs.Level level, string message)
@@ -241,13 +235,12 @@ namespace WildApricotAPI
             return null;
         }
 
-        public JObject GetLatestMemberData()
+        // This method will get the latest member data from Wild Apricot for the given
+        // date that we got from the sync database
+        public JObject GetLatestMemberData(string currentDate)
         {
             string GetMemberListUrl()
             {
-                // We need the current date in YYYY-MM-DD format
-                string currentDate = DateTime.Now.ToString("yyyy-MM-dd");
-                
                 string requestString = "https://api.wildapricot.org/v2.2/accounts/" + this.accountId + "/contacts?%24async=true&%24filter='Profile%20Last%20Updated'%20ge%20'" + currentDate + "'";
                 Log(WAEventArgs.Level.Informational, "Request is " + requestString);
 
