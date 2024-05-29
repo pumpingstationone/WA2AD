@@ -11,6 +11,10 @@ namespace WA2AD
 {
     class Program
     {
+        // Our job types, which we can use as contants right now
+        public const string FULL_SYNC = "full";
+        public const string LATEST_SYNC = "latest";
+
         EventLogTraceListener wa2adTraceListener = new EventLogTraceListener("WA2AD");
 
         private ADActions adActions = null;
@@ -34,13 +38,13 @@ namespace WA2AD
             }
         }
 
-        public Program()
+        public Program(string jobType)
         {
             try
             {
                 Trace.Listeners.Add(this.wa2adTraceListener);
 
-                Log.Write(Log.Level.Informational, "Beginning job...");
+                Log.Write(Log.Level.Informational, "Beginning job...this is a " + jobType + " job");
 
                 // Here we're instantiating the object that handled all the Active Directory
                 // work (it also calls the B2C stuff as well)
@@ -63,8 +67,19 @@ namespace WA2AD
 
                 try
                 {
-                    //var memberData = waData.GetAllMemberData();
-                    var memberData = waData.GetLatestMemberData();
+                    Newtonsoft.Json.Linq.JObject memberData = null;
+
+                    if (jobType == FULL_SYNC)
+                    {
+                        // Get all the data from WA (this is a full sync)
+                        memberData = waData.GetAllMemberData();
+                    }
+                    else if (jobType == LATEST_SYNC)
+                    {
+                        // Get the latest data from WA (this is a delta sync)
+                        memberData = waData.GetLatestMemberData();
+                    }
+                   
                     if (memberData == null)
                     {
                         Log.Write(Log.Level.Error, "No data to work with so not continuing");
@@ -78,7 +93,7 @@ namespace WA2AD
                         Member member = (Member)obj.ToObject<Member>();
 
                         // Our guinea pig for everything...
-                        //if (member.FirstName != "Testy" || member.LastName != "McTestface")                  
+                        //if (member.FirstName != "Nic" || member.LastName != "Andrews")                  
                         //    continue;
 
                         processMember(member);
@@ -116,7 +131,33 @@ namespace WA2AD
         {
             Log.Write(Log.Level.Informational, "Starting...");
 
-            new Program();
+            string jobType = "";
+
+            // Now we need to check if there's a switch to tell
+            // us what to do, either --full or --latest
+            if (args.Length == 0)
+            {
+                Log.Write(Log.Level.Error, "No arguments passed, please pass either --full or --latest");
+                return;
+            }
+
+            if (args[0] == "--full")
+            {
+                Log.Write(Log.Level.Informational, "Running full sync");
+                jobType = FULL_SYNC;
+            }
+            else if (args[0] == "--latest")
+            {
+                Log.Write(Log.Level.Informational, "Running latest sync");
+                jobType = LATEST_SYNC;
+            }
+            else
+            {
+                Log.Write(Log.Level.Error, "Invalid argument passed, please pass either --full or --latest");
+                return;
+            }
+
+            new Program(jobType);
         }
     }
 }
