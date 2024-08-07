@@ -524,11 +524,12 @@ namespace WA2AD
                 return;
             }
 
+            bool disableBecausePending = false;
             // But do nothing if the membership is still pending
             if (member.Status == "PendingNew")
             {
                 Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") Ah, but membership is still pending, so not going to add");
-                return;
+                disableBecausePending = true;
             }
 
             UserPrincipal u = new UserPrincipal(pc)
@@ -541,11 +542,26 @@ namespace WA2AD
                 Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") Oh, hey, found " + member.FirstName + " in AD");
                 bool isMemberEnabled = UpdateUser(member, ref u);
 
+                // If the user is pending, we want to make sure they're disabled
+                if (disableBecausePending)
+                {
+                    Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") Not going to update " + member.FirstName + " " + member.LastName + " because membership is still pending");
+                    isMemberEnabled = false;
+                }
+
                 this.b2cActions.UpdateUser(isMemberEnabled, member, u);
             }
             else
-            {
+            {   
                 Log.Write(Log.Level.Informational, "(mid:" + member.Id + ") Didn't find " + member.FirstName + " in AD, so must be new...");
+                
+                // If the user is pending, we don't want to create them 
+                if (disableBecausePending)
+                {
+                    Log.Write(Log.Level.Warning, "(mid:" + member.Id + ") Not going to create a new user for " + member.FirstName + " " + member.LastName + " because membership is still pending");
+                    return;
+                }
+                  
                 CreateUser(member);
 
                 // Now we need to get the AD object so we can update B2C with it
