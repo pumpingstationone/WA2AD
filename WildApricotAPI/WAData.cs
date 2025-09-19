@@ -204,12 +204,7 @@ namespace WildApricotAPI
 
             int offset = 0;
             int limit = 100;
-            string requestString = "https://api.wildapricot.org/v2/Accounts/" + this.accountId + "/Contacts?%24async=false%24skip=" + offset + "&%24top=" + limit;
-            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, requestString);
-            request.Headers.Add("Authorization", "Bearer " + this.oauthToken);
-            request.Headers.Add("User-Agent", "WA2AD");
-            request.Headers.Add("Accept", "application/json");
-
+ 
             // Now let's get all the data, looping through the pages
             JObject allData = new JObject();
             JArray allContacts = new JArray();
@@ -218,11 +213,10 @@ namespace WildApricotAPI
             while (moreData)
             {
                 Log(WAEventArgs.Level.Informational, "Getting data starting at offset " + offset);
-                requestString = "https://api.wildapricot.org/v2/Accounts/" + this.accountId + "/Contacts?%24async=false&%24skip=" + offset + "&%24top=" + limit;
-                request = new HttpRequestMessage(HttpMethod.Get, requestString);
+                string requestString = "https://api.wildapricot.org/v2/Accounts/" + this.accountId + "/Contacts?%24async=false&%24skip=" + offset + "&%24top=" + limit;
+                HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, requestString);
                 request.Headers.Add("Authorization", "Bearer " + this.oauthToken);
-                request.Headers.Add("User-Agent", "WA2AD");
-                request.Headers.Add("Accept", "application/json");
+
                 JObject pageData = SendRequest(request).Result;
                 if (pageData != null && pageData.HasValues && pageData["Contacts"] != null && pageData["Contacts"].HasValues)
                 {
