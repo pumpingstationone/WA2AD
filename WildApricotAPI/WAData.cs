@@ -193,6 +193,9 @@ namespace WildApricotAPI
             }
         }
 
+        // This is the new way to get all the member data from WA, using
+        // paging to get it all. This is only used when we're doing a full sync
+        // (i.e. not just the delta since the last sync)
         public JObject RetrieveAllMemberData()
         {
             Log(WAEventArgs.Level.Informational, "Starting to get all the member data from Wild Apricot in the new way...");
