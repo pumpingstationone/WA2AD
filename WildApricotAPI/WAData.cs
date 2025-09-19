@@ -193,6 +193,65 @@ namespace WildApricotAPI
             }
         }
 
+        public JObject RetrieveAllMemberData()
+        {
+            Log(WAEventArgs.Level.Informational, "Starting to get all the member data from Wild Apricot in the new way...");
+
+            GetOauthToken();
+
+            // The new way is to get the data synchronously with paging
+            // (https://gethelp.wildapricot.com/en/articles/2911-preparing-your-api-integrations-for-pagination#changes)
+
+            int offset = 0;
+            int limit = 100;
+            string requestString = "https://api.wildapricot.org/v2/Accounts/" + this.accountId + "/Contacts?%24async=false%24skip=" + offset + "&%24top=" + limit;
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, requestString);
+            request.Headers.Add("Authorization", "Bearer " + this.oauthToken);
+            request.Headers.Add("User-Agent", "WA2AD");
+            request.Headers.Add("Accept", "application/json");
+
+            // Now let's get all the data, looping through the pages
+            JObject allData = new JObject();
+            JArray allContacts = new JArray();
+            allData["Contacts"] = allContacts;
+            bool moreData = true;
+            while (moreData)
+            {
+                Log(WAEventArgs.Level.Informational, "Getting data starting at offset " + offset);
+                requestString = "https://api.wildapricot.org/v2/Accounts/" + this.accountId + "/Contacts?%24async=false&%24skip=" + offset + "&%24top=" + limit;
+                request = new HttpRequestMessage(HttpMethod.Get, requestString);
+                request.Headers.Add("Authorization", "Bearer " + this.oauthToken);
+                request.Headers.Add("User-Agent", "WA2AD");
+                request.Headers.Add("Accept", "application/json");
+                JObject pageData = SendRequest(request).Result;
+                if (pageData != null && pageData.HasValues && pageData["Contacts"] != null && pageData["Contacts"].HasValues)
+                {
+                    Log(WAEventArgs.Level.Informational, "Got some data...");
+                    foreach (var contact in pageData["Contacts"])
+                    {
+                        allContacts.Add(contact);
+                    }
+                    // If we got less than the limit then we're done
+                    if (pageData["Contacts"].Count() < limit)
+                    {
+                        moreData = false;
+                    }
+                    else
+                    {
+                        offset += limit;
+                    }
+                }
+                else
+                {
+                    Log(WAEventArgs.Level.Warning, "Hmm, we didn't get any data back from WA. Stopping.");
+                    moreData = false;
+                }
+            }
+
+            Log(WAEventArgs.Level.Informational, "Finished getting the data from Wild Apricot...");
+            return allData;
+        }
+
         public JObject GetAllMemberData()
         {
             string GetMemberListUrl()

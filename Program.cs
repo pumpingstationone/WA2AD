@@ -76,7 +76,8 @@ namespace WA2AD
                     if (jobType == FULL_SYNC)
                     {
                         // Get all the data from WA (this is a full sync)
-                        memberData = waData.GetAllMemberData();
+                        //memberData = waData.GetAllMemberData();
+                        memberData = waData.RetrieveAllMemberData();
                     }
                     else if (jobType == LATEST_SYNC)
                     {
@@ -101,8 +102,8 @@ namespace WA2AD
                         Member member = (Member)obj.ToObject<Member>();
 
                         // Our guinea pig for everything...
-                        //if (member.FirstName != "Nic" || member.LastName != "Andrews")                  
-                        //    continue;
+                        if (member.FirstName != "Ed" || member.LastName != "Bennett")                  
+                            continue;
 
                         processMember(member);
 
